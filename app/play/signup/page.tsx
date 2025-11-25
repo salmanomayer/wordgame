@@ -32,6 +32,8 @@ export default function SignupPage() {
         email,
         options: {
           shouldCreateUser: true,
+          emailRedirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || "https://puzzleword.vercel.app/play/dashboard",
         },
       })
 
@@ -62,7 +64,12 @@ export default function SignupPage() {
       if (error) throw error
 
       if (password) {
-        await supabase.auth.updateUser({ password })
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password,
+        })
+        if (updateError) {
+          console.error("[v0] Password update error:", updateError)
+        }
       }
 
       router.push("/play/dashboard")
@@ -82,7 +89,8 @@ export default function SignupPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/play/dashboard`,
+          redirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || "https://puzzleword.vercel.app/play/dashboard",
         },
       })
 

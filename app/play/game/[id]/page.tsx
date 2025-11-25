@@ -47,20 +47,28 @@ export default function GamePage({ params }: { params: { id: string } }) {
     const initGame = async () => {
       try {
         const supabase = createClient()
-        console.log("[v0] Starting game initialization")
+        console.log("[v0] Starting game initialization for session:", params.id)
 
         const {
           data: { user },
           error: authError,
         } = await supabase.auth.getUser()
 
-        if (authError || !user) {
+        if (authError) {
           console.error("[v0] Auth error:", authError)
+          alert("Authentication error. Please log in again.")
           router.push("/play/login")
           return
         }
 
-        console.log("[v0] User authenticated, fetching game session")
+        if (!user) {
+          console.error("[v0] No authenticated user found")
+          alert("You must be logged in to play. Redirecting to login...")
+          router.push("/play/login")
+          return
+        }
+
+        console.log("[v0] User authenticated:", user.id)
         setUserId(user.id)
 
         const { data: gameSession, error: sessionError } = await supabase
@@ -69,14 +77,40 @@ export default function GamePage({ params }: { params: { id: string } }) {
           .eq("id", params.id)
           .single()
 
-        if (sessionError || !gameSession) {
-          console.error("[v0] Error fetching game session:", sessionError)
-          alert("Game session not found")
+        if (sessionError) {
+          console.error("[v0] Session fetch error:", sessionError)
+
+          if (sessionError.code === "PGRST116") {
+            // No rows returned - session doesn't exist or RLS blocking access
+            alert(
+              "Game session not found or you don't have permission to access it. Please start a new game from the dashboard.",
+            )
+          } else {
+            alert(`Database error: ${sessionError.message}`)
+          }
+
           router.push("/play/dashboard")
           return
         }
 
-        console.log("[v0] Game session found:", gameSession)
+        if (!gameSession) {
+          console.error("[v0] Game session is null")
+          alert("Game session not found. Please start a new game from the dashboard.")
+          router.push("/play/dashboard")
+          return
+        }
+
+        if (gameSession.player_id !== user.id) {
+          console.error("[v0] Session belongs to different user:", {
+            sessionPlayerId: gameSession.player_id,
+            currentUserId: user.id,
+          })
+          alert("This game session belongs to a different user. Please start a new game.")
+          router.push("/play/dashboard")
+          return
+        }
+
+        console.log("[v0] Game session found and verified:", gameSession)
         setGameSessionId(gameSession.id)
         setSelectedSubject(gameSession.subject_id)
         setDifficulty(gameSession.difficulty)
@@ -188,7 +222,6 @@ export default function GamePage({ params }: { params: { id: string } }) {
       setFeedback("correct")
       triggerFireworks("small")
     } else {
-      setFeedback("wrong")
     }
 
     if (gameSessionId) {
@@ -205,15 +238,18 @@ export default function GamePage({ params }: { params: { id: string } }) {
       }
     }
 
-    setTimeout(() => {
-      if (currentIndex < words.length - 1) {
-        setCurrentIndex(currentIndex + 1)
-        setFeedback(null)
-        setShowHint(false)
-      } else {
-        completeGame(isCorrect ? score + 10 : score)
-      }
-    }, 1500)
+    setTimeout(
+      () => {
+        if (currentIndex < words.length - 1) {
+          setCurrentIndex(currentIndex + 1)
+          setFeedback(null)
+          setShowHint(false)
+        } else {
+          completeGame(isCorrect ? score + 10 : score)
+        }
+      },
+      isCorrect ? 1500 : 500,
+    )
   }
 
   const completeGame = async (finalScore: number) => {
@@ -465,32 +501,30 @@ export default function GamePage({ params }: { params: { id: string } }) {
 
             {/* Options Grid */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-              {currentWord.options.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => handleAnswer(option)}
-                  disabled={!!feedback}
-                  className={`p-5 sm:p-6 rounded-xl text-3xl sm:text-4xl font-bold transition-all border-2 min-h-[60px] sm:min-h-[80px] ${
-                    feedback === "correct" &&
-                    option.toUpperCase() ===
-                      currentWord.missingIndex
-                        .map((idx) => currentWord.word[idx])
-                        .join("")
-                        .toUpperCase()
-                      ? "bg-green-500/20 border-green-500 text-green-400"
-                      : feedback === "wrong" &&
-                          option.toUpperCase() ===
-                            currentWord.missingIndex
-                              .map((idx) => currentWord.word[idx])
-                              .join("")
-                              .toUpperCase()
-                        ? "bg-red-500/20 border-red-500 text-red-400"
-                        : "bg-emerald-800/50 border-emerald-700 text-white hover:bg-emerald-700/50 hover:border-emerald-600 active:scale-95"
-                  } ${feedback ? "cursor-not-allowed" : "cursor-pointer"}`}
-                >
-                  {option}
-                </button>
-              ))}
+              {currentWord.options.map((option) => {
+                const correctLetters = currentWord.missingIndex
+                  .map((idx) => currentWord.word[idx])
+                  .join("")
+                  .toUpperCase()
+                const isCorrectOption = option.toUpperCase() === correctLetters
+
+                return (
+                  <button
+                    key={option}
+                    onClick={() => handleAnswer(option)}
+                    disabled={!!feedback}
+                    className={`p-5 sm:p-6 rounded-xl text-3xl sm:text-4xl font-bold transition-all border-2 min-h-[60px] sm:min-h-[80px] ${
+                      feedback === "correct" && isCorrectOption
+                        ? "bg-green-500/20 border-green-500 text-green-400"
+                        : feedback === "wrong" && !isCorrectOption
+                          ? "bg-red-500/20 border-red-500 text-red-400 opacity-50"
+                          : "bg-emerald-800/50 border-emerald-700 text-white hover:bg-emerald-700/50 hover:border-emerald-600 active:scale-95"
+                    } ${feedback ? "cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    {option}
+                  </button>
+                )
+              })}
             </div>
 
             <Button

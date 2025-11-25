@@ -15,6 +15,7 @@ interface Player {
   total_score: number
   games_played: number
   created_at: string
+  is_active: boolean // Added is_active field
 }
 
 export default function AdminPlayersPage() {
@@ -72,6 +73,27 @@ export default function AdminPlayersPage() {
     }
   }
 
+  const handleToggleStatus = async (playerId: string, currentStatus: boolean) => {
+    const token = localStorage.getItem("admin_token")
+    try {
+      const response = await fetch(`/api/admin/players/${playerId}/status`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_active: !currentStatus }),
+      })
+
+      if (!response.ok) throw new Error("Failed to update player status")
+
+      setPlayers(players.map((p) => (p.id === playerId ? { ...p, is_active: !currentStatus } : p)))
+    } catch (error) {
+      console.error("[v0] Error updating player status:", error)
+      alert("Failed to update player status")
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -97,13 +119,14 @@ export default function AdminPlayersPage() {
                   <TableHead>Total Score</TableHead>
                   <TableHead>Games Played</TableHead>
                   <TableHead>Joined</TableHead>
+                  <TableHead>Status</TableHead> {/* Added Status column */}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {players.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       No players found
                     </TableCell>
                   </TableRow>
@@ -115,6 +138,15 @@ export default function AdminPlayersPage() {
                       <TableCell>{player.total_score}</TableCell>
                       <TableCell>{player.games_played}</TableCell>
                       <TableCell>{new Date(player.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant={player.is_active ? "default" : "secondary"}
+                          size="sm"
+                          onClick={() => handleToggleStatus(player.id, player.is_active)}
+                        >
+                          {player.is_active ? "Active" : "Disabled"}
+                        </Button>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="destructive" size="sm" onClick={() => handleDelete(player.id)}>
                           <Trash2 className="h-4 w-4" />

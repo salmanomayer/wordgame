@@ -38,11 +38,17 @@ export default function HomePage() {
     setMounted(true)
 
     const checkUser = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        setUser(user)
+      } catch (error) {
+        console.log("[v0] Supabase client not configured, skipping auth check:", error)
+        // Landing page works fine without authentication
+        setUser(null)
+      }
     }
     checkUser()
   }, [])

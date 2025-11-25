@@ -12,41 +12,19 @@ const _geist = V0_Font_Geist({ subsets: ['latin'], weight: ["100","200","300","4
 const _geistMono = V0_Font_Geist_Mono({ subsets: ['latin'], weight: ["100","200","300","400","500","600","700","800","900"] })
 const _sourceSerif_4 = V0_Font_Source_Serif_4({ subsets: ['latin'], weight: ["200","300","400","500","600","700","800","900"] })
 
-const geist = Geist({
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-})
-
-const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-})
-
-const sourceSerif = Source_Serif_4({
+const _sourceSerif4 = Source_Serif_4({
   subsets: ["latin"],
   weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
 })
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
+  title: "Word puzzle game",
+  description: "Challenge your brain with our word puzzle game - train your mind, boost vocabulary, and have fun!",
   generator: "v0.app",
   icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
   },
 }
 

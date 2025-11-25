@@ -19,6 +19,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/play/signup") ||
     request.nextUrl.pathname.startsWith("/play/login") ||
     request.nextUrl.pathname.startsWith("/play/verify-otp") ||
+    request.nextUrl.pathname.startsWith("/play/forgot-password") ||
+    request.nextUrl.pathname.startsWith("/play/reset-password") ||
     request.nextUrl.pathname.startsWith("/play/dashboard") ||
     request.nextUrl.pathname.startsWith("/play/leaderboard")
 

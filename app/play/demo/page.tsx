@@ -168,7 +168,15 @@ export default function DemoPage() {
       }, 1500)
     } else {
       setFeedback("wrong")
-      setTimeout(() => setFeedback(null), 1500)
+      setTimeout(() => {
+        if (currentIndex < DEMO_WORDS.length - 1) {
+          setCurrentIndex(currentIndex + 1)
+          setFeedback(null)
+          setShowHint(false)
+        } else {
+          setIsComplete(true)
+        }
+      }, 500)
     }
   }
 
@@ -303,23 +311,27 @@ export default function DemoPage() {
 
             {/* Options Grid */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-              {currentOptions.map((letter) => (
-                <button
-                  key={letter}
-                  onClick={() => handleAnswer(letter)}
-                  disabled={!!feedback}
-                  className={`p-4 sm:p-6 rounded-xl text-3xl sm:text-4xl font-bold transition-all border-2 active:scale-95 ${
-                    feedback === "correct" &&
-                    letter.toUpperCase() === currentWord.word[currentMissingIndex].toUpperCase()
-                      ? "bg-green-500/20 border-green-500 text-green-400"
-                      : feedback === "wrong" && letter === currentWord.word[currentMissingIndex]
-                        ? "bg-red-500/20 border-red-500 text-red-400"
-                        : "bg-slate-800/50 border-slate-700 text-white hover:bg-slate-700/50 hover:border-slate-600 active:bg-slate-600/50"
-                  } ${feedback ? "cursor-not-allowed opacity-50" : "cursor-pointer"} min-h-[80px] sm:min-h-[100px]`}
-                >
-                  {letter}
-                </button>
-              ))}
+              {currentOptions.map((letter) => {
+                const correctLetter = currentWord.word[currentMissingIndex].toUpperCase()
+                const isCorrectOption = letter.toUpperCase() === correctLetter
+
+                return (
+                  <button
+                    key={letter}
+                    onClick={() => handleAnswer(letter)}
+                    disabled={!!feedback}
+                    className={`p-4 sm:p-6 rounded-xl text-3xl sm:text-4xl font-bold transition-all border-2 active:scale-95 ${
+                      feedback === "correct" && isCorrectOption
+                        ? "bg-green-500/20 border-green-500 text-green-400"
+                        : feedback === "wrong" && !isCorrectOption
+                          ? "bg-red-500/20 border-red-500 text-red-400 opacity-50"
+                          : "bg-slate-800/50 border-slate-700 text-white hover:bg-slate-700/50 hover:border-slate-600 active:bg-slate-600/50"
+                    } ${feedback ? "cursor-not-allowed opacity-50" : "cursor-pointer"} min-h-[80px] sm:min-h-[100px]`}
+                  >
+                    {letter}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Show Hint Button */}

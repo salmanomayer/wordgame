@@ -139,6 +139,15 @@ export default function PlayerLoginPage() {
               </Button>
             </form>
 
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => router.push("/play/forgot-password")}
+                className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+              >
+                Forgot your password?
+              </button>
+            </div>
+
             <div className="mt-6 space-y-3">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
