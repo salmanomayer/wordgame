@@ -26,6 +26,7 @@ interface Subject {
 export default function DashboardPage() {
   const [subjects, setSubjects] = useState<Subject[]>([])
   const [user, setUser] = useState<any>(null)
+  const [player, setPlayer] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedSubject, setSelectedSubject] = useState("")
   const [selectedDifficulty, setSelectedDifficulty] = useState("medium")
@@ -44,7 +45,68 @@ export default function DashboardPage() {
         return
       }
 
+      console.log("[v0] User authenticated in dashboard:", user.id)
       setUser(user)
+
+      const { data: existingPlayer, error: playerError } = await supabase
+        .from("players")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle() // Use maybeSingle instead of single to avoid errors when no row exists
+
+      console.log("[v0] Player fetch result:", { existingPlayer, playerError })
+
+      if (playerError && playerError.code !== "PGRST116") {
+        console.error("[v0] Unexpected player fetch error:", playerError)
+        alert("Error loading profile. Please try again.")
+        return
+      }
+
+      if (!existingPlayer) {
+        // Player doesn't exist, create one
+        console.log("[v0] Creating new player for user:", user.id)
+        const { data: newPlayer, error: createError } = await supabase
+          .from("players")
+          .insert({
+            id: user.id,
+            display_name: user.email?.split("@")[0] || "Player",
+            phone_number: user.phone || null,
+            total_score: 0,
+            games_played: 0,
+            is_active: true,
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error("[v0] Failed to create player:", createError)
+          alert("Failed to initialize player profile. Please try again or contact support.")
+          return
+        }
+        console.log("[v0] New player created:", newPlayer)
+        setPlayer(newPlayer)
+      } else {
+        console.log("[v0] Existing player found:", existingPlayer)
+        setPlayer(existingPlayer)
+
+        // Check if player is active
+        if (!existingPlayer.is_active) {
+          alert("Your account is not active. Please contact support.")
+          await supabase.auth.signOut()
+          router.push("/play/login")
+          return
+        }
+      }
+
+      try {
+        await fetch("/api/player/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "dashboard_visit" }),
+        })
+      } catch (logError) {
+        console.error("[v0] Failed to log activity:", logError)
+      }
 
       const { data: subjects } = await supabase.from("subjects").select("*").eq("is_active", true).order("name")
 
@@ -68,12 +130,27 @@ export default function DashboardPage() {
       return
     }
 
+    if (!user?.id) {
+      console.error("[v0] No user ID found")
+      alert("Session error. Please log in again.")
+      router.push("/play/login")
+      return
+    }
+
+    if (!player?.id) {
+      console.error("[v0] No player record found")
+      alert("Player profile not found. Please refresh the page or log in again.")
+      router.push("/play/login")
+      return
+    }
+
+    console.log("[v0] Creating game session for player:", player.id)
     const supabase = createClient()
 
     const { data: session, error } = await supabase
       .from("game_sessions")
       .insert({
-        player_id: user?.id,
+        player_id: player.id, // Use player.id instead of user.id for consistency
         subject_id: selectedSubject,
         difficulty: selectedDifficulty,
         score: 0,
@@ -88,7 +165,7 @@ export default function DashboardPage() {
 
     if (error) {
       console.error("[v0] Failed to create game session", error)
-      alert("Failed to start game. Please try again.")
+      alert(`Failed to start game: ${error.message}. Please try again.`)
       return
     }
 
@@ -156,9 +233,7 @@ export default function DashboardPage() {
               <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400" />
               Ready to Play?
             </h1>
-            <p className="text-sm sm:text-base text-gray-300">
-              Welcome back, {user?.email?.split("@")[0] || user?.phone || "Player"}!
-            </p>
+            <p className="text-sm sm:text-base text-gray-300">Welcome back, {player?.display_name || "Player"}!</p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <Button variant="outline" onClick={() => router.push("/play/leaderboard")} className="flex-1 sm:flex-none">

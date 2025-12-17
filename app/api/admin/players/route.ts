@@ -14,7 +14,22 @@ export async function GET(request: NextRequest) {
 
       if (error) throw error
 
-      return NextResponse.json(players)
+      // Fetch emails from auth.users for each player
+      const playersWithEmail = await Promise.all(
+        (players || []).map(async (player) => {
+          try {
+            const { data: userData } = await supabase.auth.admin.getUserById(player.id)
+            return {
+              ...player,
+              email: userData?.user?.email || null,
+            }
+          } catch {
+            return { ...player, email: null }
+          }
+        }),
+      )
+
+      return NextResponse.json(playersWithEmail)
     } catch (error) {
       console.error("[v0] Players fetch error:", error)
       return NextResponse.json({ error: "Failed to fetch players" }, { status: 500 })

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams, useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +26,10 @@ const triggerFireworks = (type: "small" | "large") => {
   confetti(confettiConfig)
 }
 
-export default function GamePage({ params }: { params: { id: string } }) {
+export default function GamePage() {
+  const params = useParams()
+  const sessionId = params.id as string
+
   const [words, setWords] = useState<GameWord[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [userAnswer, setUserAnswer] = useState("")
@@ -47,7 +50,14 @@ export default function GamePage({ params }: { params: { id: string } }) {
     const initGame = async () => {
       try {
         const supabase = createClient()
-        console.log("[v0] Starting game initialization for session:", params.id)
+        console.log("[v0] Starting game initialization for session:", sessionId)
+
+        if (!sessionId || sessionId === "undefined") {
+          console.error("[v0] Invalid session ID:", sessionId)
+          alert("Invalid game session. Please start a new game from the dashboard.")
+          router.push("/play/dashboard")
+          return
+        }
 
         const {
           data: { user },
@@ -71,17 +81,45 @@ export default function GamePage({ params }: { params: { id: string } }) {
         console.log("[v0] User authenticated:", user.id)
         setUserId(user.id)
 
+        const { data: playerData, error: playerError } = await supabase
+          .from("players")
+          .select("id, is_active")
+          .eq("id", user.id)
+          .maybeSingle()
+
+        if (playerError) {
+          console.error("[v0] Player fetch error:", playerError)
+          alert("Failed to load player profile. Please try again.")
+          router.push("/play/dashboard")
+          return
+        }
+
+        if (!playerData) {
+          console.error("[v0] No player record found for user:", user.id)
+          alert("Player profile not found. Redirecting to dashboard to create one...")
+          router.push("/play/dashboard")
+          return
+        }
+
+        if (!playerData.is_active) {
+          console.error("[v0] Player is inactive:", user.id)
+          alert("Your account is not active. Please contact support.")
+          router.push("/play/login")
+          return
+        }
+
+        console.log("[v0] Player verified:", playerData.id)
+
         const { data: gameSession, error: sessionError } = await supabase
           .from("game_sessions")
           .select("*, subjects(name)")
-          .eq("id", params.id)
+          .eq("id", sessionId)
           .single()
 
         if (sessionError) {
           console.error("[v0] Session fetch error:", sessionError)
 
           if (sessionError.code === "PGRST116") {
-            // No rows returned - session doesn't exist or RLS blocking access
             alert(
               "Game session not found or you don't have permission to access it. Please start a new game from the dashboard.",
             )
@@ -156,7 +194,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
     }
 
     initGame()
-  }, [params.id, router])
+  }, [sessionId, router])
 
   useEffect(() => {
     if (!isComplete && words.length > 0) {
@@ -222,6 +260,7 @@ export default function GamePage({ params }: { params: { id: string } }) {
       setFeedback("correct")
       triggerFireworks("small")
     } else {
+      setFeedback("wrong")
     }
 
     if (gameSessionId) {
@@ -321,46 +360,102 @@ export default function GamePage({ params }: { params: { id: string } }) {
     ]
     const randomPraise = praiseMessages[Math.floor(Math.random() * praiseMessages.length)]
 
+    const formatTime = (seconds: number) => {
+      const mins = Math.floor(seconds / 60)
+      const secs = seconds % 60
+      return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
+    }
+
+    const accuracy = Math.round((score / 50) * 100)
+
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-950 via-teal-950 to-blue-950 p-6">
-        <Card className="w-full max-w-md bg-slate-900/90 backdrop-blur-md border-emerald-700 text-white">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-950 p-4 sm:p-6 overflow-hidden">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl" />
+        </div>
+
+        <Card className="relative w-full max-w-lg bg-gradient-to-b from-slate-900/95 to-slate-950/95 backdrop-blur-xl border border-emerald-500/30 text-white shadow-2xl shadow-emerald-500/10 overflow-hidden">
+          {/* Decorative top border gradient */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500" />
+
+          <CardHeader className="text-center pt-8 pb-4">
+            {/* Trophy with enhanced glow effect */}
+            <div className="flex justify-center mb-6">
               <div className="relative">
-                <Trophy className="w-24 h-24 text-yellow-400 animate-bounce" />
-                <div className="absolute inset-0 bg-yellow-400/20 rounded-full blur-xl animate-pulse" />
+                <div className="absolute inset-0 bg-yellow-400/30 rounded-full blur-2xl scale-150 animate-pulse" />
+                <div className="relative bg-gradient-to-b from-yellow-300 to-yellow-500 rounded-full p-4 shadow-lg shadow-yellow-500/50">
+                  <Trophy className="w-16 h-16 sm:w-20 sm:h-20 text-yellow-900" />
+                </div>
+                {allCorrect && (
+                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full px-2 py-1 text-xs font-bold animate-bounce">
+                    PERFECT!
+                  </div>
+                )}
               </div>
-            </div>
-            <CardTitle className="text-3xl text-emerald-400 mb-2">{randomPraise}</CardTitle>
-            <p className="text-slate-300">Game Complete!</p>
-          </CardHeader>
-          <CardContent className="text-center space-y-6">
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg p-6">
-              <div className="text-5xl font-bold text-white mb-2">{score}</div>
-              <p className="text-white/80">Total Points</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-800/50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-green-400">{Math.floor(score / 10)}/5</div>
-                <p className="text-slate-400 text-sm">Correct Answers</p>
+            <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent mb-2">
+              {randomPraise}
+            </CardTitle>
+            <p className="text-slate-400 text-sm sm:text-base">Game Complete!</p>
+          </CardHeader>
+
+          <CardContent className="text-center space-y-6 px-6 pb-8">
+            {/* Main Score Card */}
+            <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 rounded-2xl p-6 shadow-lg shadow-emerald-500/30 overflow-hidden">
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnY0em0wLTZ2LTRoLTJ2NGgyem0tNiA2aC00djJoNHYtMnptMC02djRoLTR2LTJoMnYtMmgyem0tNi02di0yaDR2LTJoLTR2MmgtMnYyaDJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
+              <div className="relative">
+                <div className="text-6xl sm:text-7xl font-black text-white mb-1 drop-shadow-lg">{score}</div>
+                <p className="text-emerald-100 font-medium text-sm sm:text-base uppercase tracking-wider">
+                  Total Points
+                </p>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-blue-400">{difficulty}</div>
-                <p className="text-slate-400 text-sm">Difficulty</p>
+            </div>
+
+            {/* Stats Grid - 3 columns with time taken */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-800/60 backdrop-blur rounded-xl p-4 border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+                <div className="text-xl sm:text-2xl font-bold text-emerald-400">{Math.floor(score / 10)}/5</div>
+                <p className="text-slate-400 text-xs sm:text-sm mt-1">Correct</p>
+              </div>
+              <div className="bg-slate-800/60 backdrop-blur rounded-xl p-4 border border-slate-700/50 hover:border-teal-500/50 transition-colors">
+                <div className="text-xl sm:text-2xl font-bold text-teal-400 capitalize">{difficulty}</div>
+                <p className="text-slate-400 text-xs sm:text-sm mt-1">Difficulty</p>
+              </div>
+              <div className="bg-slate-800/60 backdrop-blur rounded-xl p-4 border border-slate-700/50 hover:border-cyan-500/50 transition-colors">
+                <div className="text-xl sm:text-2xl font-bold text-cyan-400">{formatTime(timer)}</div>
+                <p className="text-slate-400 text-xs sm:text-sm mt-1">Time</p>
+              </div>
+            </div>
+
+            {/* Accuracy Bar */}
+            <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-slate-400 text-sm">Accuracy</span>
+                <span className="text-emerald-400 font-bold">{accuracy}%</span>
+              </div>
+              <div className="h-3 bg-slate-700/50 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${accuracy}%` }}
+                />
               </div>
             </div>
 
             {allCorrect && (
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                <p className="text-yellow-400 font-semibold">🎉 Perfect Score! 🎉</p>
-                <p className="text-yellow-200 text-sm">You got every word right!</p>
+              <div className="bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/40 rounded-xl p-4 backdrop-blur">
+                <p className="text-yellow-300 font-bold text-lg">Perfect Score!</p>
+                <p className="text-yellow-200/80 text-sm">You got every word right!</p>
               </div>
             )}
 
-            <div className="flex flex-col gap-3">
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3 pt-2">
               <Button
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-6 text-lg"
+                className="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-bold py-6 text-lg rounded-xl shadow-lg shadow-emerald-500/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-emerald-500/50"
                 onClick={async () => {
                   try {
                     const supabase = createClient()

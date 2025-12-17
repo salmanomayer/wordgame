@@ -86,11 +86,12 @@ export default function SignupPage() {
 
     try {
       const supabase = createClient()
+      const redirectUrl = `${window.location.origin}/auth/callback`
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || "https://puzzleword.vercel.app/play/dashboard",
+          redirectTo: redirectUrl,
         },
       })
 

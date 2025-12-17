@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,14 @@ export default function PlayerLoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error")
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam))
+    }
+  }, [searchParams])
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,14 +52,26 @@ export default function PlayerLoginPage() {
 
     try {
       const supabase = createClient()
-      const { error } = await supabase.auth.signInWithOAuth({
+      const callbackUrl = `${window.location.origin}/auth/callback`
+      console.log("[v0] Google OAuth redirecting to:", callbackUrl)
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/play/dashboard`,
+          redirectTo: callbackUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       })
 
-      if (error) throw error
+      if (error) {
+        console.error("[v0] Google OAuth error:", error)
+        throw error
+      }
+
+      console.log("[v0] Google OAuth initiated:", data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google login failed")
       setIsLoading(false)
@@ -64,14 +84,22 @@ export default function PlayerLoginPage() {
 
     try {
       const supabase = createClient()
-      const { error } = await supabase.auth.signInWithOAuth({
+      const callbackUrl = `${window.location.origin}/auth/callback`
+      console.log("[v0] Facebook OAuth redirecting to:", callbackUrl)
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "facebook",
         options: {
-          redirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/play/dashboard`,
+          redirectTo: callbackUrl,
         },
       })
 
-      if (error) throw error
+      if (error) {
+        console.error("[v0] Facebook OAuth error:", error)
+        throw error
+      }
+
+      console.log("[v0] Facebook OAuth initiated:", data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Facebook login failed")
       setIsLoading(false)
