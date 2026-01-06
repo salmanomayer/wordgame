@@ -109,6 +109,14 @@
       "namedRegex": "^/api/admin/words/(?<nxtPid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/game/session/[id]",
+      "regex": "^/api/game/session/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/game/session/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/subjects/[id]",
       "regex": "^/api/subjects/([^/]+?)(?:/)?$",
       "routeKeys": {

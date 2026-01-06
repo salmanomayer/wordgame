@@ -40,6 +40,7 @@
   "/api/auth/reset-password/route": "app/api/auth/reset-password/route.js",
   "/api/auth/signup/route": "app/api/auth/signup/route.js",
   "/api/game/complete/route": "app/api/game/complete/route.js",
+  "/api/game/session/[id]/route": "app/api/game/session/[id]/route.js",
   "/api/game/start/route": "app/api/game/start/route.js",
   "/api/game/submit/route": "app/api/game/submit/route.js",
   "/api/leaderboard/monthly/route": "app/api/leaderboard/monthly/route.js",

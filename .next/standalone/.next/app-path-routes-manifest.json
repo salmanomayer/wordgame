@@ -40,6 +40,7 @@
   "/api/auth/reset-password/route": "/api/auth/reset-password",
   "/api/auth/signup/route": "/api/auth/signup",
   "/api/game/complete/route": "/api/game/complete",
+  "/api/game/session/[id]/route": "/api/game/session/[id]",
   "/api/game/start/route": "/api/game/start",
   "/api/game/submit/route": "/api/game/submit",
   "/api/leaderboard/monthly/route": "/api/leaderboard/monthly",
