@@ -1,0 +1,59 @@
+# Docker Compose file for development with hot-reloading
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: word-game-db-dev
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DATABASE:-wordgame}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+      - ./scripts:/docker-entrypoint-initdb.d:ro
+    networks:
+      - word-game-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  word-game-app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: word-game-app-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-wordgame}
+      - POSTGRES_HOST=db
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DATABASE:-wordgame}
+      - POSTGRES_URL_NON_POOLING=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DATABASE:-wordgame}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change}
+      - PLAYER_JWT_SECRET=${PLAYER_JWT_SECRET:-dev-player-jwt-secret-change}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - word-game-network
+    depends_on:
+      db:
+        condition: service_healthy
+
+networks:
+  word-game-network:
+    driver: bridge
+
+volumes:
+  pgdata_dev:

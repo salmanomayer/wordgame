@@ -1,0 +1,3 @@
+{
+  "/api/admin/words/bulk-upload/route": "app/api/admin/words/bulk-upload/route.js"
+}

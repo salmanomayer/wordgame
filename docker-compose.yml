@@ -1,0 +1,79 @@
+services:
+ # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: word-game-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DATABASE:-wordgame}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts:/docker-entrypoint-initdb.d:ro
+    networks:
+      - word-game-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js Application
+  word-game:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: word-game
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Node Environment
+      - NODE_ENV=production
+      # Database Connection
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-wordgame}
+      - POSTGRES_HOST=db
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DATABASE:-wordgame}
+      - POSTGRES_URL_NON_POOLING=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DATABASE:-wordgame}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change}
+      - PLAYER_JWT_SECRET=${PLAYER_JWT_SECRET:-dev-player-jwt-secret-change}
+      
+      # SMTP Configuration
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+      
+    volumes:
+      # Mount for hot-reloading in development (comment out for production)
+      # - .:/app
+      # - /app/node_modules
+      # - /app/.next
+      
+      # Mount for logs
+      - ./logs:/app/logs
+    networks:
+      - word-game-network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  word-game-network:
+    driver: bridge
+
+volumes:
+  logs:
+  pgdata:

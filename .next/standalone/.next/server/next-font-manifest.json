@@ -1,0 +1,137 @@
+{
+  "app": {
+    "[project]/app/_not-found/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/dashboard/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/games/[id]/edit/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/games/new/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/games/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/login/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/players/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/settings/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/setup/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/subjects/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/users/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/admin/words/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/categories/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/dashboard/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/demo/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/difficulty-select/[subjectId]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/forgot-password/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/game/[id]/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/instant/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/leaderboard/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/login/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/reset-password/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/scores/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/signup/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ],
+    "[project]/app/play/verify-otp/page": [
+      "static/media/caa3a2e1cccd8315-s.p.853070df.woff2",
+      "static/media/797e433ab948586e-s.p.dbea232f.woff2",
+      "static/media/68d403cf9f2c68c5-s.p.f9f15f61.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}
