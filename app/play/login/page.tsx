@@ -49,7 +49,7 @@ export default function PlayerLoginPage() {
     setError(null)
 
     try {
-      throw new Error("OAuth login is not supported in local mode")
+      window.location.href = `/api/auth/oauth/start?provider=google&next=${encodeURIComponent("/play/dashboard")}`
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google login failed")
       setIsLoading(false)
@@ -61,7 +61,7 @@ export default function PlayerLoginPage() {
     setError(null)
 
     try {
-      throw new Error("OAuth login is not supported in local mode")
+      window.location.href = `/api/auth/oauth/start?provider=facebook&next=${encodeURIComponent("/play/dashboard")}`
     } catch (err) {
       setError(err instanceof Error ? err.message : "Facebook login failed")
       setIsLoading(false)

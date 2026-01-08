@@ -37,6 +37,7 @@
   "/api/auth/login/route": "/api/auth/login",
   "/api/auth/logout/route": "/api/auth/logout",
   "/api/auth/me/route": "/api/auth/me",
+  "/api/auth/oauth/start/route": "/api/auth/oauth/start",
   "/api/auth/reset-password/route": "/api/auth/reset-password",
   "/api/auth/signup/route": "/api/auth/signup",
   "/api/game/complete/route": "/api/game/complete",

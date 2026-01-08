@@ -117,7 +117,7 @@ export default function HomePage() {
                   className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
                   onClick={() => router.push("/play/instant")}
                 >
-                  Start Playing Now
+                  Play demo
                   <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button
@@ -126,7 +126,7 @@ export default function HomePage() {
                   className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 border-2 border-indigo-500/50 bg-indigo-500/10 text-white hover:bg-indigo-500/20 backdrop-blur-sm w-full sm:w-auto"
                   onClick={() => router.push("/play/login")}
                 >
-                  Sign In to Continue
+                  Sign in Have Fun 😊
                 </Button>
               </>
             )}

@@ -311,6 +311,12 @@
       "namedRegex": "^/api/auth/me(?:/)?$"
     },
     {
+      "page": "/api/auth/oauth/start",
+      "regex": "^/api/auth/oauth/start(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/oauth/start(?:/)?$"
+    },
+    {
       "page": "/api/auth/reset-password",
       "regex": "^/api/auth/reset\\-password(?:/)?$",
       "routeKeys": {},
