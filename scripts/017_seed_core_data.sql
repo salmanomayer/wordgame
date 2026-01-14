@@ -54,55 +54,55 @@ SELECT 'English', 'Everyday English words', true
 WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE name = 'English');
 
 INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'ATOM', 'Smallest unit of matter', s.id
+SELECT 'ATOM', 'Smallest unit of matter', s.id, TRUE
 FROM subjects s
 WHERE s.name = 'Science'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'ATOM' AND w.subject_id = s.id);
 
 INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'CELL', 'Basic unit of life', s.id
+SELECT 'CELL', 'Basic unit of life', s.id,TRUE
 FROM subjects s
 WHERE s.name = 'Science'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'CELL' AND w.subject_id = s.id);
 
 INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'GRAVITY', 'Force that pulls objects together', s.id
+SELECT 'GRAVITY', 'Force that pulls objects together', s.id, TRUE
 FROM subjects s
 WHERE s.name = 'Science'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'GRAVITY' AND w.subject_id = s.id);
 
-INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'ANGLE', 'Formed by two rays', s.id
+INSERT INTO words (word, hint, subject_id, is_active) 
+SELECT 'ANGLE', 'Formed by two rays', s.id, TRUE
 FROM subjects s
 WHERE s.name = 'Mathematics'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'ANGLE' AND w.subject_id = s.id);
 
 INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'RATIO', 'Comparison of two quantities', s.id
+SELECT 'RATIO', 'Comparison of two quantities', s.id, TRUE
 FROM subjects s
 WHERE s.name = 'Mathematics'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'RATIO' AND w.subject_id = s.id);
 
 INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'VECTOR', 'Quantity with magnitude and direction', s.id
+SELECT 'VECTOR', 'Quantity with magnitude and direction', s.id, TRUE
 FROM subjects s
 WHERE s.name = 'Mathematics'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'VECTOR' AND w.subject_id = s.id);
 
 INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'NOUN', 'Person, place, or thing', s.id
+SELECT 'NOUN', 'Person, place, or thing', s.id, TRUE
 FROM subjects s
 WHERE s.name = 'English'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'NOUN' AND w.subject_id = s.id);
 
 INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'ADJECTIVE', 'Describes a noun', s.id
+SELECT 'ADJECTIVE', 'Describes a noun', s.id, TRUE
 FROM subjects s
 WHERE s.name = 'English'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'ADJECTIVE' AND w.subject_id = s.id);
 
 INSERT INTO words (word, hint, subject_id, is_active)
-SELECT 'VERB', 'Action word', s.id
+SELECT 'VERB', 'Action word', s.id, TRUE
 FROM subjects s
 WHERE s.name = 'English'
 AND NOT EXISTS (SELECT 1 FROM words w WHERE w.word = 'VERB' AND w.subject_id = s.id);
