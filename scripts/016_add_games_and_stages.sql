@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS games (
   end_time TIMESTAMPTZ,
   correct_marks INTEGER NOT NULL DEFAULT 10,
   time_per_word INTEGER NOT NULL DEFAULT 30, -- in seconds
+  difficulty VARCHAR(20) DEFAULT 'medium',
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

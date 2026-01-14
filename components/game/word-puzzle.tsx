@@ -350,13 +350,7 @@ export function WordPuzzle({
         <Progress value={progress} className="h-2 bg-slate-800" />
       </div>
 
-      {showTimer && (
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800/50 border-2 border-slate-600">
-            <span className="text-2xl font-bold text-white">{Math.floor(timeLeft / 10)}</span>
-          </div>
-        </div>
-      )}
+      {/* Removed large timer circle */}
 
       <Card className="bg-slate-800/30 border-slate-700/50 p-8 backdrop-blur-sm">
         <div className="text-center">
@@ -375,7 +369,7 @@ export function WordPuzzle({
             <div className={`text-xl font-semibold mt-4 ${isCorrect ? "text-green-400" : "text-red-400"}`}>
               {isCorrect
                 ? "✓ Correct!"
-                : `✗ Wrong! The answer was "${puzzleData?.correctLetters?.[0] ?? ""}"`}
+                : `✗ Wrong! The answer was "${(Array.isArray(puzzleData?.correctLetters) ? puzzleData?.correctLetters.join(", ") : (puzzleData?.correctLetters?.[0] ?? ""))?.toUpperCase()}"`}
             </div>
           )}
         </div>
@@ -396,7 +390,10 @@ export function WordPuzzle({
             }`}
             variant="outline"
           >
-            {letter}
+            {letter
+              .split(",")
+              .map((s) => s.trim().toUpperCase())
+              .join(", ")}
           </Button>
         ))}
       </div>

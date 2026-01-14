@@ -42,7 +42,11 @@ CREATE TABLE IF NOT EXISTS words (
   subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  -- Puzzle-specific optional fields
+  missing_position INTEGER,
+  correct_letter TEXT,
+  wrong_options TEXT[]
 );
 
 -- Create game sessions table
