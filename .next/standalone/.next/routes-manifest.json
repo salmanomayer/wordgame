@@ -37,6 +37,14 @@
       "namedRegex": "^/api/admin/games/(?<nxtPid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/admin/games/[id]/results",
+      "regex": "^/api/admin/games/([^/]+?)/results(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/games/(?<nxtPid>[^/]+?)/results(?:/)?$"
+    },
+    {
       "page": "/api/admin/games/[id]/test-words",
       "regex": "^/api/admin/games/([^/]+?)/test\\-words(?:/)?$",
       "routeKeys": {
@@ -177,6 +185,12 @@
       "regex": "^/admin/games/new(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/admin/games/new(?:/)?$"
+    },
+    {
+      "page": "/admin/games/results",
+      "regex": "^/admin/games/results(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/games/results(?:/)?$"
     },
     {
       "page": "/admin/login",

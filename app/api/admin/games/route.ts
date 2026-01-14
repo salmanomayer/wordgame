@@ -65,18 +65,49 @@ export async function POST(request: NextRequest) {
   return withAdminAuth(request, async () => {
     try {
       const body = await request.json()
-      const { title, start_time, end_time, correct_marks, time_per_word, word_count, difficulty, subjects, stages } = body
+      const { title, start_time, end_time, correct_marks, time_per_word, word_count, difficulty, attempts_limit, subjects, stages } = body
 
       if (!title || !correct_marks) {
         return NextResponse.json({ error: "Title and marks are mandatory" }, { status: 400 })
       }
 
       const result = await transaction(async (client) => {
+        const { rows: attemptsCol } = await client.query(
+          "SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'attempts_limit'",
+        )
+        const hasAttemptsLimit = attemptsCol.length > 0
+        const { rows: stageDiffCol } = await client.query(
+          "SELECT 1 FROM information_schema.columns WHERE table_name = 'game_stages' AND column_name = 'difficulty'",
+        )
+        const hasStageDifficulty = stageDiffCol.length > 0
+
         // 1. Insert Game
+        const gameInsertCols = [
+          "title",
+          "start_time",
+          "end_time",
+          "correct_marks",
+          "time_per_word",
+          "word_count",
+          "difficulty",
+        ]
+        const gameInsertValues: any[] = [
+          title,
+          start_time || null,
+          end_time || null,
+          correct_marks,
+          time_per_word || 30,
+          word_count || 5,
+          difficulty || "medium",
+        ]
+        if (hasAttemptsLimit) {
+          gameInsertCols.push("attempts_limit")
+          gameInsertValues.push(attempts_limit ?? null)
+        }
+        const placeholders = gameInsertValues.map((_, i) => `$${i + 1}`).join(", ")
         const gameRes = await client.query(
-          `INSERT INTO games (title, start_time, end_time, correct_marks, time_per_word, word_count, difficulty) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-          [title, start_time || null, end_time || null, correct_marks, time_per_word || 30, word_count || 5, difficulty || 'medium']
+          `INSERT INTO games (${gameInsertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
+          gameInsertValues,
         )
         const game = gameRes.rows[0]
 
@@ -94,11 +125,20 @@ export async function POST(request: NextRequest) {
         if (stages && stages.length > 0) {
           for (let i = 0; i < stages.length; i++) {
             const stage = stages[i]
-            const stageRes = await client.query(
-              `INSERT INTO game_stages (game_id, title, order_index, word_count, difficulty) 
-               VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-              [game.id, stage.title, i, stage.word_count || 5, stage.difficulty || 'medium']
-            )
+            let stageRes
+            if (hasStageDifficulty) {
+              stageRes = await client.query(
+                `INSERT INTO game_stages (game_id, title, order_index, word_count, difficulty) 
+                 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+                [game.id, stage.title, i, stage.word_count || 5, stage.difficulty || "medium"],
+              )
+            } else {
+              stageRes = await client.query(
+                `INSERT INTO game_stages (game_id, title, order_index, word_count) 
+                 VALUES ($1, $2, $3, $4) RETURNING id`,
+                [game.id, stage.title, i, stage.word_count || 5],
+              )
+            }
             const stageId = stageRes.rows[0].id
 
             // Insert Stage Subjects

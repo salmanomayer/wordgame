@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS words (
 CREATE TABLE IF NOT EXISTS game_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  game_id UUID REFERENCES games(id) ON DELETE SET NULL,
   subject_id UUID NOT NULL REFERENCES subjects(id),
   difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
   score INTEGER DEFAULT 0,
@@ -76,5 +77,7 @@ CREATE TABLE IF NOT EXISTS game_answers (
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_words_subject ON words(subject_id);
 CREATE INDEX IF NOT EXISTS idx_game_sessions_player ON game_sessions(player_id);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_game ON game_sessions(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_player_game ON game_sessions(player_id, game_id);
 CREATE INDEX IF NOT EXISTS idx_game_answers_session ON game_answers(game_session_id);
 CREATE INDEX IF NOT EXISTS idx_subjects_difficulty ON subjects(difficulty);

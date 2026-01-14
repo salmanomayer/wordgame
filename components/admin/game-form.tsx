@@ -45,6 +45,11 @@ export function GameForm({ initialData, isEdit }: GameFormProps) {
   const [gameSubjects, setGameSubjects] = useState<string[]>(Array.isArray(initialData?.subjects) ? initialData.subjects : [])
   const [stages, setStages] = useState<Stage[]>(Array.isArray(initialData?.stages) ? initialData.stages : [])
   const [hasStages, setHasStages] = useState(Array.isArray(initialData?.stages) && initialData.stages.length > 0)
+  const [attemptsLimit, setAttemptsLimit] = useState<string>(
+    initialData?.attempts_limit !== undefined && initialData?.attempts_limit !== null
+      ? String(initialData.attempts_limit)
+      : ""
+  )
 
   const router = useRouter()
   const { toast } = useToast()
@@ -117,6 +122,7 @@ export function GameForm({ initialData, isEdit }: GameFormProps) {
       word_count: Number(wordCount),
       difficulty,
       is_active: isActive,
+      attempts_limit: attemptsLimit !== "" ? Number(attemptsLimit) : null,
       subjects: hasStages ? [] : gameSubjects,
       stages: hasStages ? stages : []
     }
@@ -198,6 +204,20 @@ export function GameForm({ initialData, isEdit }: GameFormProps) {
                 type="number" 
                 value={timePerWord} 
                 onChange={(e) => setTimePerWord(e.target.value)} 
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="attempts">Attempts per Player (optional)</Label>
+              <Input
+                id="attempts"
+                type="number"
+                min="1"
+                value={attemptsLimit}
+                onChange={(e) => setAttemptsLimit(e.target.value)}
+                placeholder="Leave blank for unlimited"
               />
             </div>
           </div>

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS games (
   time_per_word INTEGER NOT NULL DEFAULT 30, -- in seconds
   difficulty VARCHAR(20) DEFAULT 'medium',
   is_active BOOLEAN DEFAULT TRUE,
+  attempts_limit INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -41,6 +42,10 @@ CREATE INDEX IF NOT EXISTS idx_games_is_active ON games(is_active);
 CREATE INDEX IF NOT EXISTS idx_game_stages_game_id ON game_stages(game_id);
 CREATE INDEX IF NOT EXISTS idx_game_subjects_game_id ON game_subjects(game_id);
 CREATE INDEX IF NOT EXISTS idx_game_stage_subjects_stage_id ON game_stage_subjects(stage_id);
+
+-- Backfill columns for existing databases
+ALTER TABLE games ADD COLUMN IF NOT EXISTS attempts_limit INTEGER;
+ALTER TABLE game_stages ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20) DEFAULT 'medium';
 
 -- Add permissions for games
 INSERT INTO admin_permissions (role, resource, can_create, can_read, can_update, can_delete) VALUES

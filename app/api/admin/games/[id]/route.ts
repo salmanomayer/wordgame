@@ -52,16 +52,49 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     try {
       const { id } = await params
       const body = await request.json()
-      const { title, start_time, end_time, correct_marks, time_per_word, word_count, difficulty, is_active, subjects, stages } = body
+      const { title, start_time, end_time, correct_marks, time_per_word, word_count, difficulty, is_active, attempts_limit, subjects, stages } = body
 
       const result = await transaction(async (client) => {
+        const { rows: attemptsCol } = await client.query(
+          "SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'attempts_limit'",
+        )
+        const hasAttemptsLimit = attemptsCol.length > 0
+        const { rows: stageDiffCol } = await client.query(
+          "SELECT 1 FROM information_schema.columns WHERE table_name = 'game_stages' AND column_name = 'difficulty'",
+        )
+        const hasStageDifficulty = stageDiffCol.length > 0
+
         // 1. Update Game
+        const updateFields: string[] = [
+          "title = $1",
+          "start_time = $2",
+          "end_time = $3",
+          "correct_marks = $4",
+          "time_per_word = $5",
+          "word_count = $6",
+          "is_active = $7",
+          "difficulty = $8",
+        ]
+        const params: any[] = [
+          title,
+          start_time || null,
+          end_time || null,
+          correct_marks,
+          time_per_word,
+          word_count,
+          is_active,
+          difficulty || "medium",
+        ]
+        if (hasAttemptsLimit) {
+          updateFields.push("attempts_limit = $9")
+          params.push(attempts_limit ?? null)
+        }
+        params.push(id)
         const gameRes = await client.query(
           `UPDATE games 
-           SET title = $1, start_time = $2, end_time = $3, correct_marks = $4, 
-               time_per_word = $5, word_count = $6, is_active = $7, difficulty = $8, updated_at = NOW() 
-           WHERE id = $9 RETURNING *`,
-          [title, start_time || null, end_time || null, correct_marks, time_per_word, word_count, is_active, difficulty || 'medium', id]
+           SET ${updateFields.join(", ")}, updated_at = NOW() 
+           WHERE id = $${params.length} RETURNING *`,
+          params,
         )
         
         if (gameRes.rows.length === 0) {
@@ -85,11 +118,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         if (stages && stages.length > 0) {
           for (let i = 0; i < stages.length; i++) {
             const stage = stages[i]
-            const stageRes = await client.query(
-              `INSERT INTO game_stages (game_id, title, order_index, word_count, difficulty) 
-               VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-              [id, stage.title, i, stage.word_count || 5, stage.difficulty || 'medium']
-            )
+            let stageRes
+            if (hasStageDifficulty) {
+              stageRes = await client.query(
+                `INSERT INTO game_stages (game_id, title, order_index, word_count, difficulty) 
+                 VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+                [id, stage.title, i, stage.word_count || 5, stage.difficulty || "medium"],
+              )
+            } else {
+              stageRes = await client.query(
+                `INSERT INTO game_stages (game_id, title, order_index, word_count) 
+                 VALUES ($1, $2, $3, $4) RETURNING id`,
+                [id, stage.title, i, stage.word_count || 5],
+              )
+            }
             const stageId = stageRes.rows[0].id
 
             if (stage.subjects && stage.subjects.length > 0) {
