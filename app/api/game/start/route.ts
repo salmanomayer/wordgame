@@ -21,16 +21,23 @@ export async function POST(request: NextRequest) {
     let gameIdValue: string | null = null
 
     if (game_id) {
+      const { rows: attemptsCol } = await db.query(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'attempts_limit'",
+      )
+      const hasAttemptsLimit = attemptsCol.length > 0
+      const selectCols = hasAttemptsLimit
+        ? "id, attempts_limit, word_count, difficulty"
+        : "id, word_count, difficulty"
       const { rows: gameRows } = await db.query(
-        "SELECT id, attempts_limit, word_count, difficulty FROM games WHERE id = $1",
-        [game_id]
+        `SELECT ${selectCols} FROM games WHERE id = $1`,
+        [game_id],
       )
       const game = gameRows[0]
       if (!game?.id) {
         return NextResponse.json({ error: "Game not found" }, { status: 404 })
       }
 
-      if (game.attempts_limit !== null && game.attempts_limit !== undefined) {
+      if (hasAttemptsLimit && game.attempts_limit !== null && game.attempts_limit !== undefined) {
         const { rows: countRows } = await db.query(
           "SELECT COUNT(*)::int AS cnt FROM game_sessions WHERE player_id = $1 AND game_id = $2 AND completed_at IS NOT NULL",
           [auth.playerId, game.id]

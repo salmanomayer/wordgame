@@ -72,14 +72,28 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await transaction(async (client) => {
-        const { rows: attemptsCol } = await client.query(
+        let { rows: attemptsCol } = await client.query(
           "SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'attempts_limit'",
         )
-        const hasAttemptsLimit = attemptsCol.length > 0
-        const { rows: stageDiffCol } = await client.query(
+        let hasAttemptsLimit = attemptsCol.length > 0
+        if (!hasAttemptsLimit) {
+          await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS attempts_limit INTEGER")
+          ;({ rows: attemptsCol } = await client.query(
+            "SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'attempts_limit'",
+          ))
+          hasAttemptsLimit = attemptsCol.length > 0
+        }
+        let { rows: stageDiffCol } = await client.query(
           "SELECT 1 FROM information_schema.columns WHERE table_name = 'game_stages' AND column_name = 'difficulty'",
         )
-        const hasStageDifficulty = stageDiffCol.length > 0
+        let hasStageDifficulty = stageDiffCol.length > 0
+        if (!hasStageDifficulty) {
+          await client.query("ALTER TABLE game_stages ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20) DEFAULT 'medium'")
+          ;({ rows: stageDiffCol } = await client.query(
+            "SELECT 1 FROM information_schema.columns WHERE table_name = 'game_stages' AND column_name = 'difficulty'",
+          ))
+          hasStageDifficulty = stageDiffCol.length > 0
+        }
 
         // 1. Insert Game
         const gameInsertCols = [
