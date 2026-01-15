@@ -183,13 +183,7 @@ export default function ChallangeGamePage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-        <div className="text-base sm:text-lg text-white">Loading...</div>
-      </div>
-    )
-  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 relative overflow-hidden">
