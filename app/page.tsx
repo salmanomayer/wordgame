@@ -84,7 +84,7 @@ export default function HomePage() {
         <div className="flex min-h-screen flex-col items-center justify-center text-center">
           <div className="mb-6 sm:mb-8 inline-flex items-center gap-2 rounded-full bg-indigo-500/20 border border-indigo-500/30 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-indigo-300 backdrop-blur-sm">
             <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
-            Brain Training Made Fun
+            Brain Training Made Fun 
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-balance text-white mb-4 sm:mb-6 leading-tight px-4">

@@ -6,15 +6,17 @@
  export function Footer() {
    const pathname = usePathname()
    const [text, setText] = useState(`© ${new Date().getFullYear()} Word Game. All rights reserved.`)
- 
+   const [links, setLinks] = useState<Array<{ label: string; url: string }>>([])
    useEffect(() => {
      const load = async () => {
        try {
          const res = await fetch("/api/settings", { cache: "no-store" })
          const data = await res.json()
          setText(data?.footer_text || `© ${new Date().getFullYear()} Word Game. All rights reserved.`)
+         setLinks(Array.isArray(data?.admin_footer_links) ? data.admin_footer_links : [])
        } catch {
          setText(`© ${new Date().getFullYear()} Word Game. All rights reserved.`)
+         setLinks([])
        }
      }
      load()
@@ -28,14 +30,23 @@
          <p className="text-gray-300 text-xs mb-1">{text}</p>
          <p className="text-gray-400 text-xs">
            Developed by{" "}
-           <Link
-             href="https://musamalab.com"
-             target="_blank"
-             rel="noopener noreferrer"
-             className="text-indigo-400 hover:text-indigo-300 transition-colors underline font-medium"
-           >
-             Musama Lab
-           </Link>
+           {Array.isArray(links) && links.length > 0 && (
+          <>
+            {links.map((l, idx) =>
+              l?.url ? (
+                <Link
+                  key={`${l.url}-${idx}`}
+                  href={l.url}
+                  target={l.url.startsWith("http") ? "_blank" : undefined}
+                  rel={l.url.startsWith("http") ? "noopener noreferrer" : undefined}
+                  className="text-indigo-400 hover:text-indigo-300 transition-colors underline font-medium"
+                >
+                  {l.label || l.url}
+                </Link>
+              ) : null,
+            )}
+          </>
+        )}
          </p>
        </div>
      </footer>

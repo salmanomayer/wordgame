@@ -36,7 +36,6 @@ const migrationScripts = [
   '016_add_games_and_stages.sql',
   '017_add_word_count_to_games.sql',
   '017_seed_core_data.sql',
-  '018_create_game_result_table.sql'
 ];
 
 async function runMigration(scriptName) {

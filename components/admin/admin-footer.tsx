@@ -31,18 +31,8 @@ export function AdminFooter() {
         <p className="text-gray-300 text-xs mb-1">{copyright}</p>
         <p className="text-gray-400 text-xs">
           Developed by{" "}
-          <Link
-            href="https://musamalab.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-indigo-400 hover:text-indigo-300 transition-colors underline font-medium"
-          >
-            Musama Lab
-          </Link>
-        </p>
-        {text && <p className="text-muted-foreground text-xs mt-2">{text}</p>}
-        {Array.isArray(links) && links.length > 0 && (
-          <div className="flex flex-wrap gap-4 justify-center mt-2 text-xs">
+          {Array.isArray(links) && links.length > 0 && (
+          <>
             {links.map((l, idx) =>
               l?.url ? (
                 <Link
@@ -50,14 +40,18 @@ export function AdminFooter() {
                   href={l.url}
                   target={l.url.startsWith("http") ? "_blank" : undefined}
                   rel={l.url.startsWith("http") ? "noopener noreferrer" : undefined}
-                  className="text-primary hover:underline"
+                  className="text-indigo-400 hover:text-indigo-300 transition-colors underline font-medium"
                 >
                   {l.label || l.url}
                 </Link>
               ) : null,
             )}
-          </div>
+          </>
         )}
+          
+        </p>
+        
+        
       </div>
     </footer>
   )
