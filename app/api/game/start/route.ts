@@ -57,6 +57,35 @@ export async function POST(request: NextRequest) {
       sessionDifficulty = normalizedDifficulty || game.difficulty || sessionDifficulty
     }
 
+    // Ensure subjects table exists first (for foreign key reference)
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS subjects (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        description TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `)
+
+    // Ensure game_sessions table exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS game_sessions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+        game_id UUID REFERENCES games(id) ON DELETE SET NULL,
+        subject_id UUID NOT NULL REFERENCES subjects(id),
+        difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
+        score INTEGER DEFAULT 0,
+        words_completed INTEGER DEFAULT 0,
+        total_words INTEGER DEFAULT 5,
+        started_at TIMESTAMPTZ DEFAULT NOW(),
+        completed_at TIMESTAMPTZ,
+        is_demo BOOLEAN DEFAULT FALSE
+      )
+    `)
+
     // Create game session
     const { rows: gameIdCol2 } = await db.query(
       "SELECT 1 FROM information_schema.columns WHERE table_name = 'game_sessions' AND column_name = 'game_id'",

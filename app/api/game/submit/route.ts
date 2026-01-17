@@ -42,6 +42,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    // Ensure words table exists first (for foreign key reference)
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS words (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        word TEXT NOT NULL,
+        hint TEXT,
+        subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        missing_position INTEGER,
+        correct_letter TEXT,
+        wrong_options TEXT[]
+      )
+    `)
+
+    // Ensure game_answers table exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS game_answers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        game_session_id UUID NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
+        word_id UUID NOT NULL REFERENCES words(id),
+        is_correct BOOLEAN NOT NULL,
+        time_taken INTEGER,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `)
+
     // Save answer
     const { error } = await db.query(
       "INSERT INTO game_answers (game_session_id, word_id, is_correct, time_taken) VALUES ($1, $2, $3, $4)",

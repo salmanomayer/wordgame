@@ -42,6 +42,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Ensure player_logs table exists
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS player_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        player_id UUID REFERENCES players(id) ON DELETE CASCADE,
+        ip_address TEXT,
+        user_agent TEXT,
+        browser TEXT,
+        device TEXT,
+        os TEXT,
+        country TEXT,
+        city TEXT,
+        region TEXT,
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        action TEXT NOT NULL DEFAULT 'login',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `)
+
+    // Create indexes if they don't exist
+    try {
+      await db.query("CREATE INDEX IF NOT EXISTS idx_player_logs_player_id ON player_logs(player_id)")
+      await db.query("CREATE INDEX IF NOT EXISTS idx_player_logs_created_at ON player_logs(created_at DESC)")
+    } catch (err) {
+      // Ignore index creation errors
+      console.log("[v0] Index creation (non-critical):", err)
+    }
+
     await db.query(
       `INSERT INTO player_logs 
       (player_id, ip_address, user_agent, browser, device, os, country, city, region, latitude, longitude, action)
