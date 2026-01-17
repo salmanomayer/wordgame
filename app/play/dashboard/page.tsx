@@ -83,33 +83,7 @@ export default function DashboardPage() {
   }, [router])
 
   const handlePlayNow = async () => {
-    console.log("[v0] Play Now clicked", { selectedSubject, selectedDifficulty })
-    if (!selectedSubject) {
-      console.log("[v0] No subject selected")
-      alert("Please select a subject first")
-      return
-    }
-
-    if (!player?.id) {
-      console.error("[v0] No player record found")
-      alert("Player profile not found. Please refresh the page or log in again.")
-      router.push("/play/login")
-      return
-    }
-
-    try {
-      const res = await fetch("/api/game/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject_id: selectedSubject, difficulty: selectedDifficulty, is_demo: false }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || "Failed to start game")
-      router.push(`/play/game/${data.session_id}`)
-    } catch (error) {
-      console.error("[v0] Failed to start game", error)
-      alert(error instanceof Error ? error.message : "Failed to start game. Please try again.")
-    }
+    router.push("/play/random")
   }
 
   const handleLogout = async () => {
@@ -212,6 +186,15 @@ export default function DashboardPage() {
               >
                 <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                 Play Now
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => router.push("/play/challenge")}
+                className="py-4 sm:py-6 md:py-8 h-auto bg-transparent"
+              >
+                <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
+                Challenge Game
               </Button>
 
               <Dialog open={showSettings} onOpenChange={setShowSettings}>
