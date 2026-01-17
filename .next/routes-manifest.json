@@ -373,6 +373,12 @@
       "namedRegex": "^/api/leaderboard/weekly(?:/)?$"
     },
     {
+      "page": "/api/player/games",
+      "regex": "^/api/player/games(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/player/games(?:/)?$"
+    },
+    {
       "page": "/api/player/log",
       "regex": "^/api/player/log(?:/)?$",
       "routeKeys": {},
@@ -421,6 +427,12 @@
       "namedRegex": "^/play/categories(?:/)?$"
     },
     {
+      "page": "/play/challenge",
+      "regex": "^/play/challenge(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/play/challenge(?:/)?$"
+    },
+    {
       "page": "/play/dashboard",
       "regex": "^/play/dashboard(?:/)?$",
       "routeKeys": {},
@@ -455,6 +467,12 @@
       "regex": "^/play/login(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/play/login(?:/)?$"
+    },
+    {
+      "page": "/play/random",
+      "regex": "^/play/random(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/play/random(?:/)?$"
     },
     {
       "page": "/play/reset-password",

@@ -37,10 +37,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Game not found" }, { status: 404 })
       }
 
-      if (hasAttemptsLimit && game.attempts_limit !== null && game.attempts_limit !== undefined) {
+      const { rows: gameIdCol } = await db.query(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = 'game_sessions' AND column_name = 'game_id'",
+      )
+      const hasGameId = gameIdCol.length > 0
+      if (hasAttemptsLimit && hasGameId && game.attempts_limit !== null && game.attempts_limit !== undefined) {
         const { rows: countRows } = await db.query(
           "SELECT COUNT(*)::int AS cnt FROM game_sessions WHERE player_id = $1 AND game_id = $2 AND completed_at IS NOT NULL",
-          [auth.playerId, game.id]
+          [auth.playerId, game.id],
         )
         const playedCount = countRows[0]?.cnt ?? 0
         if (playedCount >= game.attempts_limit) {
@@ -54,10 +58,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Create game session
-    const { rows: sessionRows } = await db.query(
-      "INSERT INTO game_sessions (player_id, game_id, subject_id, difficulty, total_words, is_demo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-      [auth.playerId, gameIdValue, subject_id, sessionDifficulty, totalWords, is_demo || false],
+    const { rows: gameIdCol2 } = await db.query(
+      "SELECT 1 FROM information_schema.columns WHERE table_name = 'game_sessions' AND column_name = 'game_id'",
     )
+    const hasGameIdCol = gameIdCol2.length > 0
+    let sessionRows
+    if (hasGameIdCol) {
+      ;({ rows: sessionRows } = await db.query(
+        "INSERT INTO game_sessions (player_id, game_id, subject_id, difficulty, total_words, is_demo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+        [auth.playerId, gameIdValue, subject_id, sessionDifficulty, totalWords, is_demo || false],
+      ))
+    } else {
+      ;({ rows: sessionRows } = await db.query(
+        "INSERT INTO game_sessions (player_id, subject_id, difficulty, total_words, is_demo) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+        [auth.playerId, subject_id, sessionDifficulty, totalWords, is_demo || false],
+      ))
+    }
     const session = sessionRows[0]
     if (!session?.id) return NextResponse.json({ error: "Failed to start game" }, { status: 500 })
 
