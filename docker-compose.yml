@@ -39,7 +39,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DATABASE=${POSTGRES_DATABASE:-wordgame}
-      - POSTGRES_HOST=db
+      - POSTGRES_HOST=localhost
       - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DATABASE:-wordgame}
       - POSTGRES_URL_NON_POOLING=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DATABASE:-wordgame}
       - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change}
