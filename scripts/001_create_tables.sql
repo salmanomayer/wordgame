@@ -34,6 +34,47 @@ CREATE TABLE IF NOT EXISTS subjects (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create games table (moved here to resolve foreign key dependency in game_sessions)
+CREATE TABLE IF NOT EXISTS games (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  start_time TIMESTAMPTZ,
+  end_time TIMESTAMPTZ,
+  correct_marks INTEGER NOT NULL DEFAULT 10,
+  time_per_word INTEGER NOT NULL DEFAULT 30, -- in seconds
+  difficulty VARCHAR(20) DEFAULT 'medium',
+  is_active BOOLEAN DEFAULT TRUE,
+  attempts_limit INTEGER,
+  word_count INTEGER NOT NULL DEFAULT 5,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create game_subjects table
+CREATE TABLE IF NOT EXISTS game_subjects (
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+  PRIMARY KEY (game_id, subject_id)
+);
+
+-- Create game_stages table
+CREATE TABLE IF NOT EXISTS game_stages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  order_index INTEGER NOT NULL DEFAULT 0,
+  word_count INTEGER NOT NULL DEFAULT 5,
+  difficulty VARCHAR(20) DEFAULT 'medium',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create game_stage_subjects table
+CREATE TABLE IF NOT EXISTS game_stage_subjects (
+  stage_id UUID NOT NULL REFERENCES game_stages(id) ON DELETE CASCADE,
+  subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+  PRIMARY KEY (stage_id, subject_id)
+);
+
 -- Create words table
 CREATE TABLE IF NOT EXISTS words (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -76,6 +117,10 @@ CREATE TABLE IF NOT EXISTS game_answers (
 
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_words_subject ON words(subject_id);
+CREATE INDEX IF NOT EXISTS idx_games_is_active ON games(is_active);
+CREATE INDEX IF NOT EXISTS idx_game_stages_game_id ON game_stages(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_subjects_game_id ON game_subjects(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_stage_subjects_stage_id ON game_stage_subjects(stage_id);
 CREATE INDEX IF NOT EXISTS idx_game_sessions_player ON game_sessions(player_id);
 CREATE INDEX IF NOT EXISTS idx_game_sessions_game ON game_sessions(game_id);
 CREATE INDEX IF NOT EXISTS idx_game_sessions_player_game ON game_sessions(player_id, game_id);
