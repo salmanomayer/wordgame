@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Sparkles } from "lucide-react"
 
 export default function PlayerLoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  // Mobile Number Login Only
+  const [phoneNumber, setPhoneNumber] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -23,19 +23,22 @@ export default function PlayerLoginPage() {
     }
   }, [searchParams])
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleMobileLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/login", {
+      // Direct login with mobile number (no OTP)
+      const response = await fetch("/api/auth/mobile-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ phone_number: phoneNumber }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data?.error || "Login failed")
+      
+      // Login successful, redirect to dashboard
       router.push("/play/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
@@ -44,29 +47,52 @@ export default function PlayerLoginPage() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true)
-    setError(null)
+  // COMMENTED OUT: Email/Password Login
+  // const [email, setEmail] = useState("")
+  // const [password, setPassword] = useState("")
+  // const handleEmailLogin = async (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   setIsLoading(true)
+  //   setError(null)
+  //   try {
+  //     const response = await fetch("/api/auth/login", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ email, password }),
+  //     })
+  //     const data = await response.json().catch(() => ({}))
+  //     if (!response.ok) throw new Error(data?.error || "Login failed")
+  //     router.push("/play/dashboard")
+  //   } catch (err) {
+  //     setError(err instanceof Error ? err.message : "Login failed")
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // }
 
-    try {
-      window.location.href = `/api/auth/oauth/start?provider=google&next=${encodeURIComponent("/play/dashboard")}`
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Google login failed")
-      setIsLoading(false)
-    }
-  }
+  // COMMENTED OUT: Google OAuth Login
+  // const handleGoogleLogin = async () => {
+  //   setIsLoading(true)
+  //   setError(null)
+  //   try {
+  //     window.location.href = `/api/auth/oauth/start?provider=google&next=${encodeURIComponent("/play/dashboard")}`
+  //   } catch (err) {
+  //     setError(err instanceof Error ? err.message : "Google login failed")
+  //     setIsLoading(false)
+  //   }
+  // }
 
-  const handleFacebookLogin = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      window.location.href = `/api/auth/oauth/start?provider=facebook&next=${encodeURIComponent("/play/dashboard")}`
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Facebook login failed")
-      setIsLoading(false)
-    }
-  }
+  // COMMENTED OUT: Facebook OAuth Login
+  // const handleFacebookLogin = async () => {
+  //   setIsLoading(true)
+  //   setError(null)
+  //   try {
+  //     window.location.href = `/api/auth/oauth/start?provider=facebook&next=${encodeURIComponent("/play/dashboard")}`
+  //   } catch (err) {
+  //     setError(err instanceof Error ? err.message : "Facebook login failed")
+  //     setIsLoading(false)
+  //   }
+  // }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
@@ -90,7 +116,34 @@ export default function PlayerLoginPage() {
           </div>
 
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 sm:p-8 shadow-2xl border border-white/10">
-            <form onSubmit={handleEmailLogin} className="space-y-4 sm:space-y-5">
+            {/* Mobile Number Login Only */}
+            <form onSubmit={handleMobileLogin} className="space-y-4 sm:space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-white text-sm sm:text-base">
+                  Mobile Number
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+8801712345678"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  required
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-indigo-500 h-11 sm:h-12 text-base"
+                />
+              </div>
+              {error && <p className="text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded">{error}</p>}
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white h-11 sm:h-12 text-base sm:text-lg font-medium"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+
+            {/* COMMENTED OUT: Email/Password Login Form */}
+            {/* <form onSubmit={handleEmailLogin} className="space-y-4 sm:space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white text-sm sm:text-base">
                   Email
@@ -127,18 +180,20 @@ export default function PlayerLoginPage() {
               >
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
-            </form>
+            </form> */}
 
-            <div className="mt-4 text-center">
+            {/* COMMENTED OUT: Forgot Password Link */}
+            {/* <div className="mt-4 text-center">
               <button
                 onClick={() => router.push("/play/forgot-password")}
                 className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
               >
                 Forgot your password?
               </button>
-            </div>
+            </div> */}
 
-            <div className="mt-6 space-y-3">
+            {/* COMMENTED OUT: OAuth Login Buttons */}
+            {/* <div className="mt-6 space-y-3">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-white/10" />
@@ -166,10 +221,11 @@ export default function PlayerLoginPage() {
                   Facebook
                 </Button>
               </div>
-            </div>
+            </div> */}
 
             <div className="mt-6 text-center space-y-3">
-              <p className="text-sm text-gray-400">
+              {/* COMMENTED OUT: Sign Up Link */}
+              {/* <p className="text-sm text-gray-400">
                 Don&apos;t have an account?{" "}
                 <button
                   onClick={() => router.push("/play/signup")}
@@ -177,7 +233,7 @@ export default function PlayerLoginPage() {
                 >
                   Sign Up
                 </button>
-              </p>
+              </p> */}
               <Button
                 variant="ghost"
                 onClick={() => router.push("/")}

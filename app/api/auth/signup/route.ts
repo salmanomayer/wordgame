@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    const normalizedEmail = String(email).toLowerCase()
+    const normalizedEmail = String(email).trim().toLowerCase()
     const normalizedPassword = String(password)
 
     if (normalizedPassword.length < 6) {

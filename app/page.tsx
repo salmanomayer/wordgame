@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Brain, Zap, Trophy, ArrowRight, Sparkles } from "lucide-react"
-import { useEffect, useState } from "react"
 
 const floatingWords = [
   "QUANTUM",
@@ -30,24 +29,6 @@ const floatingWords = [
 
 export default function HomePage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const res = await fetch("/api/auth/me")
-        if (!res.ok) {
-          setUser(null)
-          return
-        }
-        const data = await res.json().catch(() => null)
-        setUser(data?.player ?? null)
-      } catch {
-        setUser(null)
-      }
-    }
-    checkUser()
-  }, [])
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
@@ -101,35 +82,22 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12 sm:mb-16 w-full max-w-md px-4">
-            {user ? (
-              <Button
-                size="lg"
-                className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all w-full"
-                onClick={() => router.push("/play/dashboard")}
-              >
-                Go to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-              </Button>
-            ) : (
-              <>
-                <Button
-                  size="lg"
-                  className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
-                  onClick={() => router.push("/play/instant")}
-                >
-                  Play demo
-                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 border-2 border-indigo-500/50 bg-indigo-500/10 text-white hover:bg-indigo-500/20 backdrop-blur-sm w-full sm:w-auto"
-                  onClick={() => router.push("/play/login")}
-                >
-                  Sign in Have Fun 😊
-                </Button>
-              </>
-            )}
+            <Button
+              size="lg"
+              className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
+              onClick={() => router.push("/play/instant")}
+            >
+              Play demo
+              <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 border-2 border-indigo-500/50 bg-indigo-500/10 text-white hover:bg-indigo-500/20 backdrop-blur-sm w-full sm:w-auto"
+              onClick={() => router.push("/play/login")}
+            >
+              Have a fun with sign in
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-4xl w-full px-4">

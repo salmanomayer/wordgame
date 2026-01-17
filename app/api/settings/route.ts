@@ -18,6 +18,8 @@ export async function GET(_request: NextRequest) {
     await adminDb.query(
       `ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS admin_footer_links JSONB DEFAULT '[]'::jsonb`,
     )
+    await adminDb.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS developed_by_text TEXT`)
+    await adminDb.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS developed_by_url TEXT`)
     const { rows } = await adminDb.query("SELECT * FROM site_settings LIMIT 1")
     const defaults = {
       title: "Word Game",
@@ -25,8 +27,10 @@ export async function GET(_request: NextRequest) {
       footer_text: `© ${new Date().getFullYear()} Word Game. All rights reserved.`,
       admin_footer_text: "",
       admin_footer_links: [],
+      developed_by_text: "Musama Lab",
+      developed_by_url: "https://musamalab.com",
     }
-    return NextResponse.json(rows[0] ? rows[0] : defaults)
+    return NextResponse.json(rows[0] ? { ...defaults, ...rows[0] } : defaults)
   } catch (error) {
     return NextResponse.json({ error: "Failed to load settings" }, { status: 500 })
   }

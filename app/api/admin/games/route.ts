@@ -6,6 +6,57 @@ import { transaction } from "@/lib/postgres"
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async () => {
     try {
+      // Ensure games table and related tables exist
+      await adminDb.query(`
+        CREATE TABLE IF NOT EXISTS games (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          title TEXT NOT NULL,
+          start_time TIMESTAMPTZ,
+          end_time TIMESTAMPTZ,
+          correct_marks INTEGER NOT NULL DEFAULT 10,
+          time_per_word INTEGER NOT NULL DEFAULT 30,
+          difficulty VARCHAR(20) DEFAULT 'medium',
+          is_active BOOLEAN DEFAULT TRUE,
+          attempts_limit INTEGER,
+          word_count INTEGER,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `)
+      
+      await adminDb.query(`
+        CREATE TABLE IF NOT EXISTS game_subjects (
+          game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+          subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+          PRIMARY KEY (game_id, subject_id)
+        )
+      `)
+      
+      await adminDb.query(`
+        CREATE TABLE IF NOT EXISTS game_stages (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          order_index INTEGER NOT NULL DEFAULT 0,
+          word_count INTEGER NOT NULL DEFAULT 5,
+          difficulty VARCHAR(20) DEFAULT 'medium',
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `)
+      
+      await adminDb.query(`
+        CREATE TABLE IF NOT EXISTS game_stage_subjects (
+          stage_id UUID NOT NULL REFERENCES game_stages(id) ON DELETE CASCADE,
+          subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+          PRIMARY KEY (stage_id, subject_id)
+        )
+      `)
+
+      // Add missing columns if they don't exist
+      await adminDb.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS attempts_limit INTEGER")
+      await adminDb.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS word_count INTEGER")
+      await adminDb.query("ALTER TABLE game_stages ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20) DEFAULT 'medium'")
+
       const { searchParams } = new URL(request.url)
       const q = searchParams.get("q")
       const page = parseInt(searchParams.get("page") || "1")
@@ -27,8 +78,14 @@ export async function GET(request: NextRequest) {
 
       // Get total count
       const countSql = `SELECT COUNT(*) FROM games ${whereClause}`
-      const { rows: countRows } = await adminDb.query(countSql, params)
-      const totalCount = parseInt(countRows[0].count)
+      const { rows: countRows, error: countError } = await adminDb.query(countSql, params)
+      
+      if (countError) {
+        console.error("[v0] Games count error:", countError)
+        throw countError
+      }
+      
+      const totalCount = parseInt(countRows[0]?.count || "0")
 
       // Get games with their subject counts and stage counts
       let sql = `
@@ -47,16 +104,23 @@ export async function GET(request: NextRequest) {
         params.push(limit, offset)
       }
 
-      const { rows } = await adminDb.query(sql, params)
+      const { rows, error: queryError } = await adminDb.query(sql, params)
+      
+      if (queryError) {
+        console.error("[v0] Games query error:", queryError)
+        throw queryError
+      }
+      
       return NextResponse.json({
-        data: rows,
+        data: rows || [],
         total: totalCount,
         page,
         limit: limit || totalCount
       })
     } catch (error) {
       console.error("[v0] Games fetch error:", error)
-      return NextResponse.json({ error: "Failed to fetch games" }, { status: 500 })
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      return NextResponse.json({ error: "Failed to fetch games: " + errorMessage }, { status: 500 })
     }
   })
 }
@@ -71,18 +135,62 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Title and marks are mandatory" }, { status: 400 })
       }
 
+      // Ensure tables exist before transaction
+      await adminDb.query(`
+        CREATE TABLE IF NOT EXISTS games (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          title TEXT NOT NULL,
+          start_time TIMESTAMPTZ,
+          end_time TIMESTAMPTZ,
+          correct_marks INTEGER NOT NULL DEFAULT 10,
+          time_per_word INTEGER NOT NULL DEFAULT 30,
+          difficulty VARCHAR(20) DEFAULT 'medium',
+          is_active BOOLEAN DEFAULT TRUE,
+          attempts_limit INTEGER,
+          word_count INTEGER,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `)
+      
+      await adminDb.query(`
+        CREATE TABLE IF NOT EXISTS game_subjects (
+          game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+          subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+          PRIMARY KEY (game_id, subject_id)
+        )
+      `)
+      
+      await adminDb.query(`
+        CREATE TABLE IF NOT EXISTS game_stages (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          game_id UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          order_index INTEGER NOT NULL DEFAULT 0,
+          word_count INTEGER NOT NULL DEFAULT 5,
+          difficulty VARCHAR(20) DEFAULT 'medium',
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `)
+      
+      await adminDb.query(`
+        CREATE TABLE IF NOT EXISTS game_stage_subjects (
+          stage_id UUID NOT NULL REFERENCES game_stages(id) ON DELETE CASCADE,
+          subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+          PRIMARY KEY (stage_id, subject_id)
+        )
+      `)
+
+      // Add missing columns
+      await adminDb.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS attempts_limit INTEGER")
+      await adminDb.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS word_count INTEGER")
+      await adminDb.query("ALTER TABLE game_stages ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20) DEFAULT 'medium'")
+
       const result = await transaction(async (client) => {
         let { rows: attemptsCol } = await client.query(
           "SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'attempts_limit'",
         )
         let hasAttemptsLimit = attemptsCol.length > 0
-        if (!hasAttemptsLimit) {
-          await client.query("ALTER TABLE games ADD COLUMN IF NOT EXISTS attempts_limit INTEGER")
-          ;({ rows: attemptsCol } = await client.query(
-            "SELECT 1 FROM information_schema.columns WHERE table_name = 'games' AND column_name = 'attempts_limit'",
-          ))
-          hasAttemptsLimit = attemptsCol.length > 0
-        }
         let { rows: stageDiffCol } = await client.query(
           "SELECT 1 FROM information_schema.columns WHERE table_name = 'game_stages' AND column_name = 'difficulty'",
         )
@@ -173,7 +281,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result)
     } catch (error) {
       console.error("[v0] Game create error:", error)
-      return NextResponse.json({ error: "Failed to create game" }, { status: 500 })
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      return NextResponse.json({ error: "Failed to create game: " + errorMessage }, { status: 500 })
     }
   })
 }

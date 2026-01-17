@@ -23,8 +23,20 @@ function VerifyOTPContent() {
     setError(null)
 
     try {
-      setError("OTP verification is not supported. Please sign up with email and password.")
-      router.push("/play/signup")
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone_number: phoneNumber, otp }),
+      })
+      
+      const data = await response.json().catch(() => ({}))
+      
+      if (!response.ok) {
+        throw new Error(data?.error || "OTP verification failed")
+      }
+
+      // Login successful, redirect to dashboard
+      router.push("/play/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed")
     } finally {

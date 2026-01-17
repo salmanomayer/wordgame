@@ -4,17 +4,18 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { LogOut, Settings, Trophy, Play, Sparkles, Brain, Zap } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { LogOut, Trophy, Play, Sparkles, Brain, Zap } from "lucide-react"
+// COMMENTED OUT: Settings Dialog imports (not needed anymore)
+// import {
+//   Dialog,
+//   DialogContent,
+//   DialogDescription,
+//   DialogHeader,
+//   DialogTitle,
+//   DialogTrigger,
+// } from "@/components/ui/dialog"
+// import { Label } from "@/components/ui/label"
+// import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 interface Subject {
   id: string
@@ -29,7 +30,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [selectedSubject, setSelectedSubject] = useState("")
   const [selectedDifficulty, setSelectedDifficulty] = useState("medium")
-  const [showSettings, setShowSettings] = useState(false)
+  // COMMENTED OUT: Settings dialog state (not needed anymore)
+  // const [showSettings, setShowSettings] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -83,7 +85,29 @@ export default function DashboardPage() {
   }, [router])
 
   const handlePlayNow = async () => {
-    router.push("/play/random")
+    if (!selectedSubject) {
+      alert("Please select a subject first")
+      return
+    }
+
+    if (!player?.id) {
+      alert("Player profile not found. Please refresh the page or log in again.")
+      router.push("/play/login")
+      return
+    }
+
+    try {
+      const res = await fetch("/api/game/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject_id: selectedSubject, difficulty: selectedDifficulty, is_demo: false }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || "Failed to start game")
+      router.push(`/play/game/${data.session_id}`)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to start game. Please try again.")
+    }
   }
 
   const handleLogout = async () => {
@@ -171,10 +195,11 @@ export default function DashboardPage() {
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
                 Start Your Challenge!
               </h2>
-              <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-2">
+              {/* COMMENTED OUT: Subject and Difficulty Display */}
+              {/* <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-2">
                 Subject: <span className="text-emerald-400 font-semibold">{getSelectedSubjectName()}</span>
               </p>
-              <p className="text-sm sm:text-base text-gray-400">Difficulty: {getDifficultyLabel()}</p>
+              <p className="text-sm sm:text-base text-gray-400">Difficulty: {getDifficultyLabel()}</p> */}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
@@ -185,19 +210,20 @@ export default function DashboardPage() {
                 className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white font-bold py-4 sm:py-6 md:py-8 text-lg sm:text-xl md:text-2xl h-auto shadow-lg hover:shadow-xl transition-all"
               >
                 <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                Play Now
+                Random Play
               </Button>
+
               <Button
-                variant="outline"
                 size="lg"
                 onClick={() => router.push("/play/challenge")}
-                className="py-4 sm:py-6 md:py-8 h-auto bg-transparent"
+                variant="outline"
+                className="py-4 sm:py-6 md:py-8 h-auto bg-transparent border-2 border-emerald-500 text-emerald-400 hover:bg-emerald-500/10 font-bold text-lg sm:text-xl md:text-2xl"
               >
-                <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                 Challenge Game
               </Button>
 
-              <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              {/* COMMENTED OUT: Change Mode Button */}
+              {/* <Dialog open={showSettings} onOpenChange={setShowSettings}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="lg" className="py-4 sm:py-6 md:py-8 h-auto bg-transparent">
                     <Settings className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
@@ -213,7 +239,6 @@ export default function DashboardPage() {
                   </DialogHeader>
 
                   <div className="space-y-6 py-4">
-                    {/* Subject Selection */}
                     <div className="space-y-3">
                       <Label className="text-base font-semibold">Subject</Label>
                       <RadioGroup value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -228,7 +253,6 @@ export default function DashboardPage() {
                       </RadioGroup>
                     </div>
 
-                    {/* Difficulty Selection */}
                     <div className="space-y-3">
                       <Label className="text-base font-semibold">Difficulty</Label>
                       <RadioGroup value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
@@ -258,13 +282,13 @@ export default function DashboardPage() {
                     Apply Settings
                   </Button>
                 </DialogContent>
-              </Dialog>
+              </Dialog> */}
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        {/* COMMENTED OUT: Bottom Status Cards Section */}
+        {/* <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
           <Card className="bg-slate-800/90 backdrop-blur border-slate-700">
             <CardContent className="p-4 text-center">
               <p className="text-xs sm:text-sm text-gray-400 mb-1">Game Mode</p>
@@ -283,7 +307,7 @@ export default function DashboardPage() {
               <p className="text-base sm:text-lg font-bold text-green-400">Ready!</p>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
     </div>
   )

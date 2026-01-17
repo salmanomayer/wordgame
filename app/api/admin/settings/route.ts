@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
       await adminDb.query(
         `ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS admin_footer_links JSONB DEFAULT '[]'::jsonb`,
       )
+      await adminDb.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS developed_by_text TEXT`)
+      await adminDb.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS developed_by_url TEXT`)
       const { rows } = await adminDb.query("SELECT * FROM site_settings LIMIT 1")
       const defaults = {
         title: "Word Game",
@@ -27,8 +29,10 @@ export async function GET(request: NextRequest) {
         footer_text: `© ${new Date().getFullYear()} Word Game. All rights reserved.`,
         admin_footer_text: "",
         admin_footer_links: [],
+        developed_by_text: "Musama Lab",
+        developed_by_url: "https://musamalab.com",
       }
-      return NextResponse.json(rows[0] ? rows[0] : defaults)
+      return NextResponse.json(rows[0] ? { ...defaults, ...rows[0] } : defaults)
     } catch (error) {
       return NextResponse.json({ error: "Failed to load settings" }, { status: 500 })
     }
@@ -44,6 +48,8 @@ export async function PATCH(request: NextRequest) {
       const footer_text = body.footer_text ?? null
       const admin_footer_text = body.admin_footer_text ?? null
       const admin_footer_links = Array.isArray(body.admin_footer_links) ? body.admin_footer_links : []
+      const developed_by_text = body.developed_by_text ?? null
+      const developed_by_url = body.developed_by_url ?? null
 
       await adminDb.query(`
         CREATE TABLE IF NOT EXISTS site_settings (
@@ -58,17 +64,21 @@ export async function PATCH(request: NextRequest) {
       await adminDb.query(
         `ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS admin_footer_links JSONB DEFAULT '[]'::jsonb`,
       )
+      await adminDb.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS developed_by_text TEXT`)
+      await adminDb.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS developed_by_url TEXT`)
       await adminDb.query(
-        `INSERT INTO site_settings (id, title, logo_url, footer_text, admin_footer_text, admin_footer_links, updated_at)
-         VALUES (1, $1, $2, $3, $4, $5::jsonb, NOW())
+        `INSERT INTO site_settings (id, title, logo_url, footer_text, admin_footer_text, admin_footer_links, developed_by_text, developed_by_url, updated_at)
+         VALUES (1, $1, $2, $3, $4, $5::jsonb, $6, $7, NOW())
          ON CONFLICT (id) DO UPDATE SET
            title = EXCLUDED.title,
            logo_url = EXCLUDED.logo_url,
            footer_text = EXCLUDED.footer_text,
            admin_footer_text = EXCLUDED.admin_footer_text,
            admin_footer_links = EXCLUDED.admin_footer_links,
+           developed_by_text = EXCLUDED.developed_by_text,
+           developed_by_url = EXCLUDED.developed_by_url,
            updated_at = NOW()`,
-        [title, logo_url, footer_text, admin_footer_text, JSON.stringify(admin_footer_links)],
+        [title, logo_url, footer_text, admin_footer_text, JSON.stringify(admin_footer_links), developed_by_text, developed_by_url],
       )
       const { rows } = await adminDb.query("SELECT * FROM site_settings LIMIT 1")
       return NextResponse.json(rows[0])

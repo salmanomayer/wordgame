@@ -10,9 +10,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
+    const normalizedEmail = String(email).trim().toLowerCase()
     const { rows, error } = await db.query(
       "SELECT id, email, password_hash, phone_number, display_name, total_score, games_played, is_active, created_at FROM players WHERE email = $1",
-      [String(email).toLowerCase()],
+      [normalizedEmail],
     )
     if (error) throw error
     const player = rows[0]

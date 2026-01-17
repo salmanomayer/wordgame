@@ -60,13 +60,18 @@ export function SubjectDialog({ open, onOpenChange, subject, onSuccess }: Subjec
         body: JSON.stringify({ name, description, is_active: isActive }),
       })
 
-      if (!response.ok) throw new Error("Failed to save subject")
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData?.error || "Failed to save subject"
+        throw new Error(errorMessage)
+      }
 
       onSuccess()
       onOpenChange(false)
     } catch (error) {
       console.error("Error saving subject:", error)
-      alert("Failed to save subject")
+      const errorMessage = error instanceof Error ? error.message : "Failed to save subject"
+      alert(errorMessage)
     } finally {
       setIsLoading(false)
     }

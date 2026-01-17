@@ -16,6 +16,8 @@ export default function AdminSettingsPage() {
   const [footerText, setFooterText] = useState("")
   const [adminFooterText, setAdminFooterText] = useState("")
   const [adminLinks, setAdminLinks] = useState<Array<{ label: string; url: string }>>([])
+  const [developedByText, setDevelopedByText] = useState("")
+  const [developedByUrl, setDevelopedByUrl] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const router = useRouter()
@@ -37,6 +39,8 @@ export default function AdminSettingsPage() {
         setFooterText(data?.footer_text || "")
         setAdminFooterText(data?.admin_footer_text || "")
         setAdminLinks(Array.isArray(data?.admin_footer_links) ? data.admin_footer_links : [])
+        setDevelopedByText(data?.developed_by_text || "Musama Lab")
+        setDevelopedByUrl(data?.developed_by_url || "https://musamalab.com")
       } finally {
         setLoading(false)
       }
@@ -54,7 +58,15 @@ export default function AdminSettingsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}` 
         },
-        body: JSON.stringify({ title, logo_url: logoUrl, footer_text: footerText, admin_footer_text: adminFooterText, admin_footer_links: adminLinks }),
+        body: JSON.stringify({ 
+          title, 
+          logo_url: logoUrl, 
+          footer_text: footerText, 
+          admin_footer_text: adminFooterText, 
+          admin_footer_links: adminLinks,
+          developed_by_text: developedByText,
+          developed_by_url: developedByUrl
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -182,6 +194,34 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
               <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Admin Footer"}</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Developed By</CardTitle>
+              <CardDescription>Customize the "Developed by" text and link in footer</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="developed-by-text">Developed By Text</Label>
+                <Input 
+                  id="developed-by-text" 
+                  value={developedByText} 
+                  onChange={(e) => setDevelopedByText(e.target.value)} 
+                  placeholder="Paragon Team" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="developed-by-url">Developed By URL</Label>
+                <Input 
+                  id="developed-by-url" 
+                  value={developedByUrl} 
+                  onChange={(e) => setDevelopedByUrl(e.target.value)} 
+                  placeholder="https://example.com" 
+                />
+              </div>
+              <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Developed By"}</Button>
             </CardContent>
           </Card>
           <AdminFooter />
