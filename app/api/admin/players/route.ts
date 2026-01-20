@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
 
+import { hash } from "bcryptjs"
+
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async () => {
     try {
@@ -57,6 +59,35 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       console.error("[v0] Players fetch error:", error)
       return NextResponse.json({ error: "Failed to fetch players" }, { status: 500 })
+    }
+  })
+}
+
+export async function POST(request: NextRequest) {
+  return withAdminAuth(request, async () => {
+    try {
+      const { display_name, email, phone_number, password } = await request.json()
+
+      if (!email && !phone_number) {
+          return NextResponse.json({ error: "Email or Phone is required" }, { status: 400 })
+      }
+
+      const passwordHash = await hash(password || Math.random().toString(36).slice(-8), 10)
+
+      const { rows } = await adminDb.query(
+        `INSERT INTO players (display_name, email, phone_number, password_hash)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, display_name, email, phone_number, is_active, created_at`,
+        [display_name, email || null, phone_number || null, passwordHash]
+      )
+
+      return NextResponse.json(rows[0], { status: 201 })
+    } catch (error: any) {
+      console.error("[v0] Create player error:", error)
+      if (error.code === '23505') { // Unique violation
+          return NextResponse.json({ error: "Email or Phone already exists" }, { status: 409 })
+      }
+      return NextResponse.json({ error: "Failed to create player" }, { status: 500 })
     }
   })
 }

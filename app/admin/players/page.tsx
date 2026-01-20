@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { AdminNav } from "@/components/admin/admin-nav"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -22,9 +22,12 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Plus,
+  Upload,
+  Pencil
 } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AdminFooter } from "@/components/admin/admin-footer"
 
@@ -61,13 +64,30 @@ export default function AdminPlayersPage() {
   const [total, setTotal] = useState(0)
   const [sortBy, setSortBy] = useState("created_at")
   const [sortOrder, setSortOrder] = useState("desc")
+  
+  // Dialog states
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showLogsDialog, setShowLogsDialog] = useState(false)
+  const [showPlayerDialog, setShowPlayerDialog] = useState(false)
+  
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [playerLogs, setPlayerLogs] = useState<PlayerLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
+  
+  // Form states
   const [newPassword, setNewPassword] = useState("")
   const [updatingPassword, setUpdatingPassword] = useState(false)
+  
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
+  const [playerName, setPlayerName] = useState("")
+  const [playerEmail, setPlayerEmail] = useState("")
+  const [playerPhone, setPlayerPhone] = useState("")
+  const [playerPassword, setPlayerPassword] = useState("") // Only for create
+  const [savingPlayer, setSavingPlayer] = useState(false)
+  
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   const router = useRouter()
 
   const fetchPlayers = useCallback(
@@ -152,7 +172,6 @@ export default function AdminPlayersPage() {
         ].join(","),
       ),
     ].join("\n")
-
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
     const link = document.createElement("a")
@@ -295,6 +314,115 @@ export default function AdminPlayersPage() {
     }
   }
 
+  // --- New Handlers for CRUD and Bulk Upload ---
+
+  const openAddPlayerDialog = () => {
+    setEditingPlayer(null)
+    setPlayerName("")
+    setPlayerEmail("")
+    setPlayerPhone("")
+    setPlayerPassword("")
+    setShowPlayerDialog(true)
+  }
+
+  const openEditPlayerDialog = (player: Player) => {
+    setEditingPlayer(player)
+    setPlayerName(player.display_name || "")
+    setPlayerEmail(player.email || "")
+    setPlayerPhone(player.phone_number || "")
+    setPlayerPassword("") // Usually don't show old password
+    setShowPlayerDialog(true)
+  }
+
+  const handleSavePlayer = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingPlayer(true)
+    const token = localStorage.getItem("admin_token")
+
+    try {
+      const url = editingPlayer 
+        ? `/api/admin/players/${editingPlayer.id}` 
+        : "/api/admin/players"
+      
+      const method = editingPlayer ? "PUT" : "POST"
+      
+      const body: any = {
+        display_name: playerName,
+        email: playerEmail,
+        phone_number: playerPhone,
+      }
+
+      if (!editingPlayer && playerPassword) {
+        body.password = playerPassword
+      }
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save player")
+      }
+
+      alert(editingPlayer ? "Player updated successfully" : "Player created successfully")
+      setShowPlayerDialog(false)
+      fetchPlayers(search, page, limit, sortBy, sortOrder) // Refresh list
+    } catch (error: any) {
+      console.error("Error saving player:", error)
+      alert(error.message || "Failed to save player")
+    } finally {
+      setSavingPlayer(false)
+    }
+  }
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    const token = localStorage.getItem("admin_token")
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const response = await fetch("/api/admin/players/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to upload file")
+      }
+
+      alert(`Upload processed. Success: ${data.results?.success || 0}, Failed: ${data.results?.failed || 0}`)
+      fetchPlayers(search, page, limit, sortBy, sortOrder)
+    } catch (error: any) {
+      console.error("Error uploading file:", error)
+      alert(error.message || "Failed to upload file")
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "" // Reset input
+      }
+    }
+  }
+
   if (loading) {
     return (
       <SidebarProvider>
@@ -336,10 +464,27 @@ export default function AdminPlayersPage() {
                 />
               </div>
             </div>
-            <Button onClick={handleExportExcel} variant="outline" className="w-full sm:w-auto gap-2 bg-transparent shrink-0">
-              <Download className="h-4 w-4" />
-              Export Excel
-            </Button>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".xlsx, .xls"
+                onChange={handleFileChange}
+              />
+              <Button onClick={handleUploadClick} variant="outline" className="gap-2" disabled={uploading}>
+                <Upload className="h-4 w-4" />
+                {uploading ? "Uploading..." : "Import Excel"}
+              </Button>
+              <Button onClick={openAddPlayerDialog} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Player
+              </Button>
+              <Button onClick={handleExportExcel} variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
           </div>
           <Card>
             <CardHeader>
@@ -449,6 +594,9 @@ export default function AdminPlayersPage() {
                           </Button>
                         </TableCell>
                         <TableCell className="text-right space-x-2 whitespace-nowrap">
+                          <Button variant="outline" size="sm" onClick={() => openEditPlayerDialog(player)} title="Edit Player">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <Button variant="outline" size="sm" onClick={() => handleViewLogs(player)} title="View Logs">
                             <Activity className="h-4 w-4" />
                           </Button>
@@ -554,6 +702,71 @@ export default function AdminPlayersPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Dialog for Add/Edit Player */}
+        <Dialog open={showPlayerDialog} onOpenChange={setShowPlayerDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingPlayer ? "Edit Player" : "Add New Player"}</DialogTitle>
+              <DialogDescription>
+                {editingPlayer ? "Update player details." : "Fill in the details to create a new player."}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSavePlayer}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="playerName">Display Name</Label>
+                  <Input
+                    id="playerName"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                    placeholder="John Doe"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="playerEmail">Email</Label>
+                  <Input
+                    id="playerEmail"
+                    type="email"
+                    value={playerEmail}
+                    onChange={(e) => setPlayerEmail(e.target.value)}
+                    placeholder="john@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="playerPhone">Phone Number</Label>
+                  <Input
+                    id="playerPhone"
+                    type="tel"
+                    value={playerPhone}
+                    onChange={(e) => setPlayerPhone(e.target.value)}
+                    placeholder="+880..."
+                  />
+                </div>
+                {!editingPlayer && (
+                  <div className="space-y-2">
+                    <Label htmlFor="playerPassword">Password</Label>
+                    <Input
+                      id="playerPassword"
+                      type="password"
+                      value={playerPassword}
+                      onChange={(e) => setPlayerPassword(e.target.value)}
+                      placeholder="Enter password (optional)"
+                    />
+                    <p className="text-xs text-muted-foreground">If left blank, a random password will be generated.</p>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowPlayerDialog(false)}>Cancel</Button>
+                <Button type="submit" disabled={savingPlayer}>
+                  {savingPlayer ? "Saving..." : "Save"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
           <DialogContent>
