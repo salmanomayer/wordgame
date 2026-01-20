@@ -48,6 +48,7 @@
   "/api/game/submit/route": "/api/game/submit",
   "/api/leaderboard/monthly/route": "/api/leaderboard/monthly",
   "/api/leaderboard/weekly/route": "/api/leaderboard/weekly",
+  "/api/player/game/[id]/progress/route": "/api/player/game/[id]/progress",
   "/api/player/games/route": "/api/player/games",
   "/api/player/log/route": "/api/player/log",
   "/api/player/profile/route": "/api/player/profile",

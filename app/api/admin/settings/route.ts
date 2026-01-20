@@ -2,7 +2,7 @@
 
 import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
-import { adminDb } from "@/lib/supabase/admin"
+import { adminDb } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async () => {

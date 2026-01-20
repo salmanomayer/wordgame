@@ -115,73 +115,41 @@ export default function AdminSettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Footer</CardTitle>
-              <CardDescription>Manage copyright text</CardDescription>
+              <CardDescription>Manage copyright and developed by information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="footer-text">Footer Text</Label>
-                <Input id="footer-text" value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder={`© ${new Date().getFullYear()} Word Game. All rights reserved.`} />
-              </div>
-              <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Footer"}</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Admin Footer</CardTitle>
-              <CardDescription>Show links only in admin panel</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="admin-footer-text">Admin Footer Text</Label>
-                <Input id="admin-footer-text" value={adminFooterText} onChange={(e) => setAdminFooterText(e.target.value)} placeholder="Admin footer note or description" />
+                <Label htmlFor="footer-text">Copyright Text</Label>
+                <Input id="footer-text" value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="© 2026 Word Puzzle Game. All rights reserved." />
               </div>
               <div className="space-y-2">
-                <Label>Admin Footer Links</Label>
-                <div className="space-y-3">
-                  {adminLinks.map((link, idx) => (
-                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                      <Input
-                        value={link.label}
-                        onChange={(e) => {
-                          const arr = [...adminLinks]
-                          arr[idx] = { ...arr[idx], label: e.target.value }
-                          setAdminLinks(arr)
-                        }}
-                        placeholder="Label"
-                        className="sm:col-span-2"
-                      />
-                      <Input
-                        value={link.url}
-                        onChange={(e) => {
-                          const arr = [...adminLinks]
-                          arr[idx] = { ...arr[idx], url: e.target.value }
-                          setAdminLinks(arr)
-                        }}
-                        placeholder="https://example.com"
-                        className="sm:col-span-2"
-                      />
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const arr = [...adminLinks]
-                          arr.splice(idx, 1)
-                          setAdminLinks(arr)
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    variant="outline"
-                    onClick={() => setAdminLinks([...adminLinks, { label: "", url: "" }])}
-                  >
-                    Add Link
-                  </Button>
+                 <Label htmlFor="admin-footer-text">Developer Prefix Text</Label>
+                 <Input id="admin-footer-text" value={adminFooterText} onChange={(e) => setAdminFooterText(e.target.value)} placeholder="Developed By" />
+              </div>
+              <div className="space-y-2">
+                <Label>Developer Info</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                   <Input
+                    value={adminLinks.length > 0 ? adminLinks[0].label : ""}
+                    onChange={(e) => {
+                       const newLabel = e.target.value
+                       const currentUrl = adminLinks.length > 0 ? adminLinks[0].url : ""
+                       setAdminLinks([{ label: newLabel, url: currentUrl }])
+                    }}
+                    placeholder="Name (e.g. Musala Lab)"
+                  />
+                  <Input
+                    value={adminLinks.length > 0 ? adminLinks[0].url : ""}
+                    onChange={(e) => {
+                       const newUrl = e.target.value
+                       const currentLabel = adminLinks.length > 0 ? adminLinks[0].label : ""
+                       setAdminLinks([{ label: currentLabel, url: newUrl }])
+                    }}
+                    placeholder="URL (e.g. https://musamalab.com)"
+                  />
                 </div>
               </div>
-              <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Admin Footer"}</Button>
+              <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Footer"}</Button>
             </CardContent>
           </Card>
           <AdminFooter />

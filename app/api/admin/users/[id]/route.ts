@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-import { adminDb } from "@/lib/supabase/admin"
+import { adminDb } from "@/lib/db"
 import { requireAdminWithPermission } from "@/lib/admin-middleware"
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {

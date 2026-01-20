@@ -125,6 +125,14 @@
       "namedRegex": "^/api/game/session/(?<nxtPid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/player/game/[id]/progress",
+      "regex": "^/api/player/game/([^/]+?)/progress(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/player/game/(?<nxtPid>[^/]+?)/progress(?:/)?$"
+    },
+    {
       "page": "/api/subjects/[id]",
       "regex": "^/api/subjects/([^/]+?)(?:/)?$",
       "routeKeys": {

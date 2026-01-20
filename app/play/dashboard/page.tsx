@@ -4,17 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { LogOut, Settings, Trophy, Play, Sparkles, Brain, Zap } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { LogOut, Trophy, Play, Sparkles, Brain, Zap } from "lucide-react"
 
 interface Subject {
   id: string
@@ -29,7 +19,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [selectedSubject, setSelectedSubject] = useState("")
   const [selectedDifficulty, setSelectedDifficulty] = useState("medium")
-  const [showSettings, setShowSettings] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -171,10 +160,6 @@ export default function DashboardPage() {
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
                 Start Your Challenge!
               </h2>
-              <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-2">
-                Subject: <span className="text-emerald-400 font-semibold">{getSelectedSubjectName()}</span>
-              </p>
-              <p className="text-sm sm:text-base text-gray-400">Difficulty: {getDifficultyLabel()}</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
@@ -185,105 +170,19 @@ export default function DashboardPage() {
                 className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white font-bold py-4 sm:py-6 md:py-8 text-lg sm:text-xl md:text-2xl h-auto shadow-lg hover:shadow-xl transition-all"
               >
                 <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                Play Now
+                Random Play
               </Button>
               <Button
-                variant="outline"
                 size="lg"
                 onClick={() => router.push("/play/challenge")}
-                className="py-4 sm:py-6 md:py-8 h-auto bg-transparent"
+                className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white font-bold py-4 sm:py-6 md:py-8 text-lg sm:text-xl md:text-2xl h-auto shadow-lg hover:shadow-xl transition-all"
               >
                 <Play className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                 Challenge Game
               </Button>
-
-              <Dialog open={showSettings} onOpenChange={setShowSettings}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="lg" className="py-4 sm:py-6 md:py-8 h-auto bg-transparent">
-                    <Settings className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-base sm:text-lg">Change Mode</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl sm:text-2xl">Customize Your Game</DialogTitle>
-                    <DialogDescription className="text-gray-400">
-                      Choose your subject and difficulty level
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-6 py-4">
-                    {/* Subject Selection */}
-                    <div className="space-y-3">
-                      <Label className="text-base font-semibold">Subject</Label>
-                      <RadioGroup value={selectedSubject} onValueChange={setSelectedSubject}>
-                        {subjects.map((subject) => (
-                          <div key={subject.id} className="flex items-center space-x-2">
-                            <RadioGroupItem value={subject.id} id={subject.id} />
-                            <Label htmlFor={subject.id} className="cursor-pointer">
-                              {subject.name}
-                            </Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </div>
-
-                    {/* Difficulty Selection */}
-                    <div className="space-y-3">
-                      <Label className="text-base font-semibold">Difficulty</Label>
-                      <RadioGroup value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="easy" id="easy" />
-                          <Label htmlFor="easy" className="cursor-pointer">
-                            Easy (1 missing letter)
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="medium" id="medium" />
-                          <Label htmlFor="medium" className="cursor-pointer">
-                            Medium (2 missing letters)
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="hard" id="hard" />
-                          <Label htmlFor="hard" className="cursor-pointer">
-                            Hard (3 missing letters)
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </div>
-
-                  <Button onClick={() => setShowSettings(false)} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                    Apply Settings
-                  </Button>
-                </DialogContent>
-              </Dialog>
             </div>
           </CardContent>
         </Card>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-          <Card className="bg-slate-800/90 backdrop-blur border-slate-700">
-            <CardContent className="p-4 text-center">
-              <p className="text-xs sm:text-sm text-gray-400 mb-1">Game Mode</p>
-              <p className="text-base sm:text-lg font-bold text-white">Random Play</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-slate-800/90 backdrop-blur border-slate-700">
-            <CardContent className="p-4 text-center">
-              <p className="text-xs sm:text-sm text-gray-400 mb-1">Words per Game</p>
-              <p className="text-base sm:text-lg font-bold text-emerald-400">5 Words</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-slate-800/90 backdrop-blur border-slate-700 col-span-2 sm:col-span-1">
-            <CardContent className="p-4 text-center">
-              <p className="text-xs sm:text-sm text-gray-400 mb-1">Your Status</p>
-              <p className="text-base sm:text-lg font-bold text-green-400">Ready!</p>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   )

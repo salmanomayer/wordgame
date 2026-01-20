@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-import { adminDb } from "@/lib/supabase/admin"
+import { adminDb } from "@/lib/db"
 
 // This is a one-time setup endpoint to create/reset the default admin user
 export async function POST(request: NextRequest) {

@@ -138,7 +138,7 @@ export default function RandomPlayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 relative overflow-x-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
         {["SCIENCE", "BRAIN", "PUZZLE", "WORD", "GAME", "LEARN", "FUN", "QUIZ"].map((word, i) => (
           <div
@@ -166,6 +166,11 @@ export default function RandomPlayPage() {
             <p className="text-sm sm:text-base text-gray-300">Welcome back, {player?.display_name || "Player"}!</p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={() => router.push("/play/challenge")} className="flex-1 sm:flex-none">
+              <Sparkles className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Challenge Game</span>
+              <span className="sm:hidden">Challenge</span>
+            </Button>
             <Button variant="outline" onClick={() => router.push("/play/leaderboard")} className="flex-1 sm:flex-none">
               <Trophy className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Leaderboard</span>

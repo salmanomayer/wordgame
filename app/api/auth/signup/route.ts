@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/supabase/server"
+import { db } from "@/lib/db"
 import { hashPlayerPassword, signPlayerToken } from "@/lib/player-auth"
 
 export async function POST(request: NextRequest) {

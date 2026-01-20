@@ -1,7 +1,7 @@
 "use server"
 
 import { type NextRequest, NextResponse } from "next/server"
-import { adminDb } from "@/lib/supabase/admin"
+import { adminDb } from "@/lib/db"
 
 export async function GET(_request: NextRequest) {
   try {

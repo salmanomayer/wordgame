@@ -24,6 +24,7 @@ export default function LeaderboardPage() {
     weekly: null,
     monthly: null,
   })
+  const [isChallenge, setIsChallenge] = useState(false)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
@@ -43,8 +44,8 @@ export default function LeaderboardPage() {
         }
 
         const [weeklyRes, monthlyRes] = await Promise.all([
-          fetch("/api/leaderboard/weekly"),
-          fetch("/api/leaderboard/monthly"),
+          fetch(`/api/leaderboard/weekly?is_challenge=${isChallenge}`),
+          fetch(`/api/leaderboard/monthly?is_challenge=${isChallenge}`),
         ])
 
         if (!weeklyRes.ok || !monthlyRes.ok) {
@@ -73,7 +74,7 @@ export default function LeaderboardPage() {
     }
 
     fetchLeaderboards()
-  }, [router])
+  }, [router, isChallenge])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="w-5 h-5 text-yellow-400" />
@@ -140,9 +141,29 @@ export default function LeaderboardPage() {
           Back
         </Button>
 
-        <div className="mb-6">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Leaderboard</h1>
-          <p className="text-slate-400">See how you stack up against other players</p>
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Leaderboard</h1>
+            <p className="text-slate-400">See how you stack up against other players</p>
+          </div>
+          <div className="flex bg-slate-800/90 p-1 rounded-lg">
+            <button
+              onClick={() => setIsChallenge(false)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                !isChallenge ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Random Play
+            </button>
+            <button
+              onClick={() => setIsChallenge(true)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                isChallenge ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Challenge
+            </button>
+          </div>
         </div>
 
         <Card className="bg-gradient-to-br from-emerald-600 via-teal-600 to-blue-600 border-none mb-6 shadow-xl">

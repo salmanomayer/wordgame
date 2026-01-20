@@ -1,7 +1,7 @@
 "use server"
 
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/supabase/server"
+import { db } from "@/lib/db"
 import { requirePlayer } from "@/lib/player-middleware"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const { rows } = await db.query(
-      "SELECT id, player_id, subject_id, difficulty, score, words_completed, total_words, started_at, completed_at, is_demo FROM game_sessions WHERE id = $1 AND player_id = $2",
+      "SELECT id, player_id, game_id, stage_id, subject_id, difficulty, score, words_completed, total_words, started_at, completed_at, is_demo FROM game_sessions WHERE id = $1 AND player_id = $2",
       [id, auth.playerId],
     )
 

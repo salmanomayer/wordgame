@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { db } from "@/lib/supabase/server"
+import { db } from "@/lib/db"
 import { hashPlayerPassword } from "@/lib/player-auth"
 
 export async function POST(request: Request) {

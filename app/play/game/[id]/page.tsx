@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Timer, Hash, Trophy, Lightbulb, Play } from "lucide-react"
+import { ArrowLeft, Timer, Hash, Trophy, Lightbulb, Play, Star } from "lucide-react"
 import confetti from "canvas-confetti"
 
 interface Word {
@@ -20,6 +20,7 @@ interface GameWord extends Word {
 }
 
 const triggerFireworks = (type: "small" | "large") => {
+  if (typeof window === "undefined") return
   const confettiConfig = type === "small" ? { particleCount: 100, spread: 70 } : { particleCount: 200, spread: 100 }
 
   confetti(confettiConfig)
@@ -68,7 +69,7 @@ function generatePuzzle(
 
 export default function GamePage() {
   const params = useParams()
-  const sessionId = params.id as string
+  const sessionId = params?.id as string
 
   const [words, setWords] = useState<GameWord[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -79,13 +80,33 @@ export default function GamePage() {
   const [showHint, setShowHint] = useState(false)
   const [timer, setTimer] = useState(0)
   const gameNumber = (() => {
+    if (!sessionId) return 0
+    const str = Array.isArray(sessionId) ? sessionId[0] : sessionId
+    if (!str) return 0
     let hash = 0
-    for (let i = 0; i < sessionId.length; i++) {
-      hash = (hash * 31 + sessionId.charCodeAt(i)) % 1000
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * 31 + str.charCodeAt(i)) % 1000
     }
     return hash
   })()
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("easy")
+  const [hasStarted, setHasStarted] = useState(false)
+  const [gameId, setGameId] = useState<string | null>(null)
+  const [nextStageId, setNextStageId] = useState<string | null>(null)
+  const [nextStageTitle, setNextStageTitle] = useState<string | null>(null)
+  const [currentStageTitle, setCurrentStageTitle] = useState<string | null>(null)
+  
+  // New State Variables
+  const [gameTitle, setGameTitle] = useState<string | null>(null)
+  const [stageNumber, setStageNumber] = useState<number | null>(null)
+  const [totalStages, setTotalStages] = useState<number | null>(null)
+  const [firstStageId, setFirstStageId] = useState<string | null>(null)
+  const [pointsPerWord, setPointsPerWord] = useState(10)
+  const [timePerWord, setTimePerWord] = useState<number | null>(null)
+  const [wordTimeLeft, setWordTimeLeft] = useState<number | null>(null)
+  const [attemptsLimit, setAttemptsLimit] = useState<number | null>(null)
+  const [attemptsCount, setAttemptsCount] = useState<number>(0)
+  
   const router = useRouter()
   const [selectedSubject, setSelectedSubject] = useState("")
 
@@ -139,6 +160,53 @@ export default function GamePage() {
         setGameSessionId(gameSession.id)
         setSelectedSubject(gameSession.subject_id)
         setDifficulty(gameSession.difficulty)
+        setGameId(gameSession.game_id)
+
+        if (gameSession.game_id) {
+            console.log("[v0] Fetching progress for game:", gameSession.game_id)
+            const progressRes = await fetch(`/api/player/game/${gameSession.game_id}/progress`)
+            const progress = await progressRes.json().catch(() => null)
+            console.log("[v0] Progress response:", progress)
+
+            if (progress) {
+                // Fetch Game Title
+                if (progress.game) {
+                    console.log("[v0] Setting game title:", progress.game.title)
+                    setGameTitle(progress.game.title)
+                    if (progress.game.correct_marks) {
+                        setPointsPerWord(progress.game.correct_marks)
+                    }
+                    if (progress.game.time_per_word) {
+                        setTimePerWord(progress.game.time_per_word)
+                        setWordTimeLeft(progress.game.time_per_word)
+                    }
+                    if (progress.game.attempts_limit) {
+                        setAttemptsLimit(progress.game.attempts_limit)
+                    }
+                }
+                
+                if (progress.attempts_count !== undefined) {
+                    setAttemptsCount(progress.attempts_count)
+                }
+
+                // Fetch Stage Info
+                if (progress.stages) {
+                    if (progress.stages.length > 0) {
+                        setFirstStageId(progress.stages[0].id)
+                    }
+
+                    if (gameSession.stage_id) {
+                        const currentStageIndex = progress.stages.findIndex((s: any) => s.id === gameSession.stage_id)
+                        if (currentStageIndex !== -1) {
+                            const currentStage = progress.stages[currentStageIndex]
+                            setCurrentStageTitle(currentStage.title)
+                            setStageNumber(currentStageIndex + 1)
+                        }
+                    }
+                    setTotalStages(progress.stages.length)
+                }
+            }
+        }
 
         const wordsParams = new URLSearchParams({ subject_id: String(gameSession.subject_id) })
         const wordsRes = await fetch(`/api/words?${wordsParams.toString()}`)
@@ -153,7 +221,8 @@ export default function GamePage() {
         }
 
         const shuffled = allWords.slice().sort(() => Math.random() - 0.5)
-        const selectedWords = shuffled.slice(0, 5)
+        const countToTake = gameSession.total_words || 5
+        const selectedWords = shuffled.slice(0, countToTake)
 
         const gameWords = selectedWords.map((w) => ({
           ...w,
@@ -161,7 +230,7 @@ export default function GamePage() {
         }))
         setWords(gameWords)
 
-        console.log("[v0] Game initialized successfully with", gameWords.length, "words")
+        console.log("[v0] Game initialized successfully with", gameWords.length, "words (Target:", countToTake, ")")
       } catch (error) {
         console.error("[v0] Unexpected error during game init:", error)
         alert("An error occurred. Please try again.")
@@ -173,29 +242,61 @@ export default function GamePage() {
   }, [sessionId, router])
 
   useEffect(() => {
-    if (!isComplete && words.length > 0) {
+    if (hasStarted && !isComplete && words.length > 0) {
       const interval = setInterval(() => setTimer((t) => t + 1), 1000)
       return () => clearInterval(interval)
     }
-  }, [isComplete, words])
+  }, [hasStarted, isComplete, words])
 
-  const handleAnswer = async (selectedOption: string) => {
+  // Countdown Timer Effect
+  useEffect(() => {
+    if (hasStarted && !isComplete && !feedback && timePerWord !== null && wordTimeLeft !== null) {
+        if (wordTimeLeft > 0) {
+             const timerId = setTimeout(() => setWordTimeLeft(t => t !== null ? t - 1 : null), 1000)
+             return () => clearTimeout(timerId)
+        } else {
+             handleAnswer(null) // Trigger timeout
+        }
+    }
+  }, [wordTimeLeft, hasStarted, isComplete, feedback, timePerWord])
+
+  const handleAnswer = async (selectedOption: string | null) => {
     if (feedback) return
 
     const currentWord = words[currentIndex]
-    const correctLetters = currentWord.missingIndex
-      .map((idx) => currentWord.word[idx])
-      .join("")
-      .toUpperCase()
-    const isCorrect = selectedOption.toUpperCase() === correctLetters
+    // Calculate time taken for this specific word
+    // If timePerWord is set, it's (timePerWord - wordTimeLeft)
+    // If selectedOption is null, it means timeout, so time taken is timePerWord
+    let timeTakenForWord = 0
+    if (timePerWord !== null && wordTimeLeft !== null) {
+        timeTakenForWord = timePerWord - wordTimeLeft
+    }
+    
+    // Logic for Timeout (null selectedOption)
+    if (selectedOption === null) {
+        setFeedback("wrong") // Or specific "timeout" feedback
+        timeTakenForWord = timePerWord || 0
+    }
 
-    if (isCorrect) {
-      const newScore = score + 10
-      setScore(newScore)
-      setFeedback("correct")
-      triggerFireworks("small")
+    let isCorrect = false
+    if (selectedOption) {
+        const correctLetters = currentWord.missingIndex
+        .map((idx) => currentWord.word[idx])
+        .join("")
+        .toUpperCase()
+        isCorrect = selectedOption.toUpperCase() === correctLetters
+    
+        if (isCorrect) {
+          const newScore = score + pointsPerWord
+          setScore(newScore)
+          setFeedback("correct")
+          triggerFireworks("small")
+        } else {
+          setFeedback("wrong")
+        }
     } else {
-      setFeedback("wrong")
+        // Timeout case
+        setFeedback("wrong") 
     }
 
     if (gameSessionId) {
@@ -207,7 +308,7 @@ export default function GamePage() {
             session_id: gameSessionId,
             word_id: currentWord.id,
             is_correct: isCorrect,
-            time_taken: timer,
+            time_taken: timeTakenForWord, // Send individual word time
           }),
         })
       } catch (error) {
@@ -221,23 +322,20 @@ export default function GamePage() {
           setCurrentIndex(currentIndex + 1)
           setFeedback(null)
           setShowHint(false)
+          if (timePerWord !== null) {
+              setWordTimeLeft(timePerWord)
+          }
         } else {
-          completeGame(isCorrect ? score + 10 : score)
+          completeGame(isCorrect ? score + pointsPerWord : score)
         }
       },
-      isCorrect ? 1500 : 500,
+      isCorrect ? 1500 : 1000,
     )
   }
 
   const completeGame = async (finalScore: number) => {
-    setIsComplete(true)
-
-    if (finalScore === 50) {
-      triggerFireworks("large")
-      const interval = setInterval(() => triggerFireworks("small"), 1000)
-      setTimeout(() => clearInterval(interval), 5000)
-    }
-
+    const maxScore = words.length * pointsPerWord
+    
     if (gameSessionId) {
       try {
         await fetch("/api/game/complete", {
@@ -249,8 +347,39 @@ export default function GamePage() {
             words_completed: words.length,
           }),
         })
+
+        if (gameId) {
+           const progressRes = await fetch(`/api/player/game/${gameId}/progress`)
+           const progress = await progressRes.json().catch(() => null)
+           if (progress && progress.next_stage_id) {
+               setNextStageId(progress.next_stage_id)
+               if (progress.stages) {
+                   const nextStage = progress.stages.find((s: any) => s.id === progress.next_stage_id)
+                   setNextStageTitle(nextStage?.title || "Next Stage")
+               }
+               setIsComplete(true)
+               triggerFireworks("small")
+           } else {
+               // Game Fully Complete
+               setIsComplete(true)
+               triggerFireworks("large")
+               if (finalScore === maxScore) {
+                 const interval = setInterval(() => triggerFireworks("small"), 1000)
+                 setTimeout(() => clearInterval(interval), 5000)
+               }
+           }
+        } else {
+           setIsComplete(true)
+           triggerFireworks("large")
+           if (finalScore === maxScore) {
+             const interval = setInterval(() => triggerFireworks("small"), 1000)
+             setTimeout(() => clearInterval(interval), 5000)
+           }
+        }
+
       } catch (error) {
         console.error("[v0] Failed to complete game:", error)
+        setIsComplete(true) // Fallback
       }
     }
   }
@@ -262,9 +391,73 @@ export default function GamePage() {
       </div>
     )
   }
+  
+  if (!hasStarted && words.length > 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 p-4 sm:p-6">
+        <Card className="relative w-full max-w-lg bg-gradient-to-b from-slate-900/95 to-slate-950/95 backdrop-blur-xl border border-emerald-500/30 text-white shadow-2xl shadow-emerald-500/10 overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500" />
+          <CardHeader className="text-center pt-8 pb-4">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-emerald-400/30 rounded-full blur-2xl scale-150 animate-pulse" />
+                <div className="relative bg-gradient-to-b from-emerald-300 to-emerald-500 rounded-full p-4 shadow-lg shadow-emerald-500/50">
+                   <Play className="w-16 h-16 sm:w-20 sm:h-20 text-emerald-900 ml-2" />
+                </div>
+              </div>
+            </div>
+            <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent mb-2">
+              {gameTitle || currentStageTitle || "Ready to Play?"}
+            </CardTitle>
+            <p className="text-slate-400 text-sm sm:text-base">
+                {stageNumber && totalStages 
+                  ? `Stage ${stageNumber} of ${totalStages}${currentStageTitle && gameTitle ? `: ${currentStageTitle}` : ''}` 
+                  : `Game #${gameNumber}`}
+            </p>
+          </CardHeader>
+           <CardContent className="text-center space-y-6 px-6 pb-8">
+             <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-800/60 backdrop-blur rounded-xl p-4 border border-slate-700/50">
+                    <div className="text-xl font-bold text-emerald-400 capitalize">{difficulty}</div>
+                    <p className="text-slate-400 text-xs mt-1">Difficulty</p>
+                </div>
+                <div className="bg-slate-800/60 backdrop-blur rounded-xl p-4 border border-slate-700/50">
+                    <div className="text-xl font-bold text-cyan-400">{words.length}</div>
+                    <p className="text-slate-400 text-xs mt-1">Words</p>
+                </div>
+             </div>
+
+             {/* Points Per Word Display */}
+             <div className="bg-slate-800/60 backdrop-blur rounded-xl p-4 border border-slate-700/50 flex justify-between items-center">
+                 <span className="text-slate-400 text-sm">Points per Word</span>
+                 <div className="flex items-center gap-2">
+                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                     <span className="text-xl font-bold text-yellow-400">{pointsPerWord}</span>
+                 </div>
+             </div>
+             
+             <Button
+                className="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-bold py-6 text-lg rounded-xl shadow-lg shadow-emerald-500/30 transition-all duration-300 hover:scale-[1.02]"
+                onClick={() => setHasStarted(true)}
+              >
+                Start Game
+              </Button>
+               <Button
+                variant="ghost"
+                className="w-full text-slate-400 hover:text-white"
+                onClick={() => router.push("/play/dashboard")}
+              >
+                Cancel
+              </Button>
+           </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   if (isComplete) {
-    const allCorrect = score === 50
+    const maxScore = words.length * pointsPerWord
+    const allCorrect = score === maxScore
     const praiseMessages = [
       "Outstanding Performance!",
       "You're a Word Master!",
@@ -312,9 +505,9 @@ export default function GamePage() {
             </div>
 
             <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent mb-2">
-              {randomPraise}
+              {nextStageId ? "Stage Complete!" : randomPraise}
             </CardTitle>
-            <p className="text-slate-400 text-sm sm:text-base">Game Complete!</p>
+            <p className="text-slate-400 text-sm sm:text-base">{nextStageId ? "Great job! Ready for the next challenge?" : "Game Complete!"}</p>
           </CardHeader>
 
           <CardContent className="text-center space-y-6 px-6 pb-8">
@@ -370,8 +563,55 @@ export default function GamePage() {
             <div className="flex flex-col gap-3 pt-2">
               <Button
                 className="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-bold py-6 text-lg rounded-xl shadow-lg shadow-emerald-500/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-emerald-500/50"
+                disabled={!nextStageId && attemptsLimit !== null && attemptsCount >= attemptsLimit}
                 onClick={async () => {
                   try {
+                    if (nextStageId) {
+                        const res = await fetch("/api/game/start", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ 
+                             game_id: gameId, 
+                             stage_id: nextStageId,
+                             is_demo: false 
+                          }),
+                        })
+                        const data = await res.json().catch(() => ({}))
+                        if (!res.ok) {
+                          alert(data?.error || "Failed to start next stage.")
+                          return
+                        }
+                        if (data?.session_id) {
+                          window.location.href = `/play/game/${data.session_id}`
+                        }
+                        return
+                    }
+
+                    // Case: Restart Game (Play Again / Try Again)
+                    // If firstStageId exists (multi-stage game), start from stage 1
+                    // Else (single stage game), just restart the game
+                    if (firstStageId) {
+                         const res = await fetch("/api/game/start", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ 
+                             game_id: gameId, 
+                             stage_id: firstStageId,
+                             is_demo: false 
+                          }),
+                        })
+                        const data = await res.json().catch(() => ({}))
+                        if (!res.ok) {
+                          alert(data?.error || "Failed to restart game.")
+                          return
+                        }
+                        if (data?.session_id) {
+                          window.location.href = `/play/game/${data.session_id}`
+                        }
+                        return
+                    }
+
+                    // Fallback to old behavior if no stages (though gameId check above should cover most)
                     if (!selectedSubject) {
                       console.error("[v0] Missing selectedSubject")
                       alert("Unable to start new game. Please try again.")
@@ -401,7 +641,11 @@ export default function GamePage() {
                 }}
               >
                 <Play className="mr-2 h-5 w-5" />
-                Play Again
+                {nextStageId 
+                    ? (nextStageTitle ? `Start ${nextStageTitle}` : "Start Next Stage") 
+                    : (attemptsLimit !== null && attemptsCount >= attemptsLimit 
+                        ? "Attempts Limit Reached" 
+                        : (attemptsLimit !== null ? "Try Again" : "Play Again"))}
               </Button>
               <Button
                 variant="outline"
@@ -439,19 +683,26 @@ export default function GamePage() {
 
         {/* Header Stats */}
         <div className="flex gap-2 sm:gap-3 mb-6 flex-wrap">
+           <div className="px-3 sm:px-4 py-2 bg-blue-800/50 backdrop-blur-sm border border-blue-700 rounded-lg flex items-center gap-2">
+            <Hash className="w-3 h-3 sm:w-4 sm:h-4 text-blue-200" />
+            <span className="text-white font-mono text-xs sm:text-sm">{gameTitle || `#${gameNumber}`}</span>
+          </div>
+          {(stageNumber && totalStages) && (
+              <div className="px-3 sm:px-4 py-2 bg-purple-800/50 backdrop-blur-sm border border-purple-700 rounded-lg flex items-center gap-2">
+                <span className="text-white font-mono text-xs sm:text-sm">Stage {stageNumber}/{totalStages}</span>
+              </div>
+          )}
           <div className="px-3 sm:px-4 py-2 bg-emerald-800/50 backdrop-blur-sm border border-emerald-700 rounded-lg flex items-center gap-2">
             <span className="text-xs text-emerald-200 uppercase font-semibold">{difficulty}</span>
           </div>
-          <div className="px-3 sm:px-4 py-2 bg-teal-800/50 backdrop-blur-sm border border-teal-700 rounded-lg flex items-center gap-2">
-            <Timer className="w-3 h-3 sm:w-4 sm:h-4 text-teal-200" />
-            <span className="text-white font-mono text-xs sm:text-sm">
-              {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, "0")}
-            </span>
-          </div>
-          <div className="px-3 sm:px-4 py-2 bg-blue-800/50 backdrop-blur-sm border border-blue-700 rounded-lg flex items-center gap-2">
-            <Hash className="w-3 h-3 sm:w-4 sm:h-4 text-blue-200" />
-            <span className="text-white font-mono text-xs sm:text-sm">#{gameNumber}</span>
-          </div>
+          {wordTimeLeft !== null && (
+              <div className={`px-3 sm:px-4 py-2 backdrop-blur-sm border rounded-lg flex items-center gap-2 ${wordTimeLeft <= 3 ? 'bg-red-800/50 border-red-700 animate-pulse' : 'bg-teal-800/50 border-teal-700'}`}>
+                <Timer className={`w-3 h-3 sm:w-4 sm:h-4 ${wordTimeLeft <= 3 ? 'text-red-200' : 'text-teal-200'}`} />
+                <span className="text-white font-mono text-xs sm:text-sm">
+                  0:{wordTimeLeft.toString().padStart(2, "0")}
+                </span>
+              </div>
+          )}
           <div className="px-3 sm:px-4 py-2 bg-yellow-800/50 backdrop-blur-sm border border-yellow-700 rounded-lg flex items-center gap-2">
             <Trophy className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400" />
             <span className="text-white font-mono text-xs sm:text-sm">{score} pts</span>
@@ -474,8 +725,16 @@ export default function GamePage() {
           <CardContent className="p-4 sm:p-6 md:p-8">
             {/* Timer Icon */}
             <div className="flex justify-center mb-4 sm:mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center">
-                <Timer className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  wordTimeLeft !== null && wordTimeLeft <= 3 
+                    ? "bg-red-600 animate-pulse shadow-lg shadow-red-500/50" 
+                    : "bg-gradient-to-br from-emerald-600 to-teal-600"
+              }`}>
+                {wordTimeLeft !== null ? (
+                    <span className="text-xl sm:text-2xl font-bold text-white">{wordTimeLeft}</span>
+                ) : (
+                    <Timer className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                )}
               </div>
             </div>
 

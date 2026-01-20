@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/supabase/server"
+import { db } from "@/lib/db"
 import { requirePlayer } from "@/lib/player-middleware"
 
 export async function GET(request: NextRequest) {
@@ -19,8 +19,6 @@ export async function GET(request: NextRequest) {
          (SELECT COUNT(*) FROM game_stages st WHERE st.game_id = g.id) AS stage_count
        FROM games g
        WHERE g.is_active = TRUE
-         AND (g.start_time IS NULL OR g.start_time <= NOW())
-         AND (g.end_time IS NULL OR g.end_time >= NOW())
        ORDER BY g.created_at DESC`,
     )
 
@@ -61,7 +59,41 @@ export async function GET(request: NextRequest) {
         attempts_limit: g.attempts_limit ?? null,
         stage_count: g.stage_count ?? 0,
         subjects,
+        attempts_count: 0 // Will be populated in the next step
       })
+    }
+
+    // Populate attempts_count for each game
+    for (const game of result) {
+        let attemptsCount = 0;
+        
+        // Check if game has stages
+        const { rows: stages } = await db.query(
+             `SELECT id FROM game_stages WHERE game_id = $1 ORDER BY order_index ASC LIMIT 1`,
+             [game.id]
+        );
+
+        if (stages.length > 0) {
+            // Multi-stage game: Count sessions for the first stage
+            const firstStageId = stages[0].id;
+            const { rows: attemptRows } = await db.query(
+                `SELECT COUNT(*) as count 
+                 FROM game_sessions 
+                 WHERE game_id = $1 AND player_id = $2 AND stage_id = $3`,
+                [game.id, auth.playerId, firstStageId]
+            );
+            attemptsCount = parseInt(attemptRows[0].count, 10);
+        } else {
+            // Single-stage game: Count sessions for the game (where stage_id might be null)
+            const { rows: attemptRows } = await db.query(
+                `SELECT COUNT(*) as count 
+                 FROM game_sessions 
+                 WHERE game_id = $1 AND player_id = $2 AND (stage_id IS NULL OR stage_id::text = '')`,
+                [game.id, auth.playerId]
+            );
+            attemptsCount = parseInt(attemptRows[0].count, 10);
+        }
+        game.attempts_count = attemptsCount;
     }
 
     return NextResponse.json({ games: result })

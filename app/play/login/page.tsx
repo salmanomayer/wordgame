@@ -36,6 +36,7 @@ export default function PlayerLoginPage() {
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data?.error || "Login failed")
+      router.refresh()
       router.push("/play/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")

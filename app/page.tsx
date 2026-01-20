@@ -41,13 +41,17 @@ export default function HomePage() {
           return
         }
         const data = await res.json().catch(() => null)
-        setUser(data?.player ?? null)
+        const player = data?.player ?? null
+        setUser(player)
+        if (player) {
+          router.push("/play/dashboard")
+        }
       } catch {
         setUser(null)
       }
     }
     checkUser()
-  }, [])
+  }, [router])
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">

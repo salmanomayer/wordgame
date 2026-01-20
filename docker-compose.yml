@@ -35,22 +35,23 @@ services:
     environment:
       # Node Environment
       - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
       # Database Connection
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DATABASE=${POSTGRES_DATABASE:-wordgame}
-      - POSTGRES_HOST=localhost
+      - POSTGRES_HOST=db
       - POSTGRES_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DATABASE:-wordgame}
       - POSTGRES_URL_NON_POOLING=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DATABASE:-wordgame}
       - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change}
       - PLAYER_JWT_SECRET=${PLAYER_JWT_SECRET:-dev-player-jwt-secret-change}
       
       # SMTP Configuration
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
-      - SMTP_FROM=${SMTP_FROM}
+      # - SMTP_HOST=${SMTP_HOST}
+      # - SMTP_PORT=${SMTP_PORT}
+      # - SMTP_USER=${SMTP_USER}
+      # - SMTP_PASS=${SMTP_PASS}
+      # - SMTP_FROM=${SMTP_FROM}
       
     volumes:
       # Mount for hot-reloading in development (comment out for production)

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/supabase/server"
+import { db } from "@/lib/db"
 import { requirePlayer } from "@/lib/player-middleware"
 
 export async function POST(request: NextRequest) {

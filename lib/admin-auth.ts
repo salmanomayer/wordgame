@@ -1,4 +1,4 @@
-import { adminDb } from "./supabase/admin"
+import { adminDb } from "./db"
 import bcrypt from "bcryptjs"
 import { SignJWT, jwtVerify } from "jose"
 

@@ -1,4 +1,4 @@
-import { adminDb } from "./supabase/admin"
+import { adminDb } from "./db"
 
 export type AdminRole = "super_admin" | "admin" | "moderator"
 export type Resource = "players" | "subjects" | "words" | "admins" | "game_sessions" | "games"

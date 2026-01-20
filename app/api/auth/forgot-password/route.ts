@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
-import { db } from "@/lib/supabase/server"
+import { db } from "@/lib/db"
 
 const nodemailer = require("nodemailer") as any
 
