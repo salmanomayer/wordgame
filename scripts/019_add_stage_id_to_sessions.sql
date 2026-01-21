@@ -1,1 +1,0 @@
-ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS stage_id UUID REFERENCES game_stages(id) ON DELETE SET NULL;

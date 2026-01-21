@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -21,7 +22,8 @@ import {
   ArrowUpDown, 
   ArrowUp, 
   ArrowDown,
-  Plus
+  Plus,
+  Upload
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { 
@@ -33,6 +35,7 @@ import {
   DialogDescription
 } from "@/components/ui/dialog"
 import { AdminFooter } from "@/components/admin/admin-footer"
+import { BulkUploadDialog } from "@/components/admin/bulk-upload-dialog"
 
 interface Subject {
   id: string
@@ -61,6 +64,10 @@ export default function AdminWordsPage() {
   const [sortBy, setSortBy] = useState("created_at")
   const [sortOrder, setSortOrder] = useState("desc")
   
+  // Bulk actions
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkUpload, setShowBulkUpload] = useState(false)
+
   // Action states
   const [editingWord, setEditingWord] = useState<Word | null>(null)
   const [deletingWord, setDeletingWord] = useState<Word | null>(null)
@@ -119,6 +126,7 @@ export default function AdminWordsPage() {
       try {
         const response = await fetch(`/api/admin/words?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
         })
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
@@ -127,6 +135,7 @@ export default function AdminWordsPage() {
         const result = await response.json()
         setWords(Array.isArray(result.data) ? result.data : [])
         setTotal(result.total || 0)
+        setSelectedIds(new Set()) // Clear selection on fetch
       } catch (error) {
         console.error("[v0] Error fetching words:", error)
         setWords([])
@@ -169,6 +178,50 @@ export default function AdminWordsPage() {
       setSortOrder("asc")
     }
     setPage(1)
+  }
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(words.map(w => w.id)))
+    } else {
+      setSelectedIds(new Set())
+    }
+  }
+
+  const toggleSelectRow = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedIds)
+    if (checked) {
+      newSelected.add(id)
+    } else {
+      newSelected.delete(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} words?`)) return
+
+    const token = localStorage.getItem("admin_token")
+    try {
+      const response = await fetch("/api/admin/words/bulk-delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      })
+
+      if (!response.ok) throw new Error("Failed to delete words")
+      
+      const data = await response.json()
+      toast({ title: "Success", description: `Deleted ${data.count} words successfully` })
+      fetchWords(search, selectedSubjectId, page, limit, sortBy, sortOrder)
+    } catch (error) {
+      console.error("Bulk delete error:", error)
+      toast({ title: "Error", description: "Failed to delete words", variant: "destructive" })
+    }
   }
 
   const handleDelete = async (word: Word) => {
@@ -260,11 +313,23 @@ export default function AdminWordsPage() {
               <h1 className="text-2xl sm:text-3xl font-bold">Word Management</h1>
               <p className="text-muted-foreground">Add, edit, and manage your word database</p>
             </div>
+            <div className="flex gap-2">
+              <Button onClick={() => setShowBulkUpload(true)} variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                Bulk Upload
+              </Button>
+            </div>
           </div>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Search & Filters</CardTitle>
+              {selectedIds.size > 0 && (
+                <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Selected ({selectedIds.size})
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -299,6 +364,13 @@ export default function AdminWordsPage() {
                 <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">
+                      <Checkbox 
+                        checked={words.length > 0 && selectedIds.size === words.length}
+                        onCheckedChange={(checked) => toggleSelectAll(!!checked)}
+                      />
+                    </TableHead>
+                    <TableHead className="w-[50px] whitespace-nowrap">S/N</TableHead>
                     <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("word")}>
                       <div className="flex items-center gap-1">
                         Word
@@ -351,8 +423,17 @@ export default function AdminWordsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    words.map((w) => (
+                    words.map((w, index) => (
                       <TableRow key={w.id}>
+                        <TableCell>
+                          <Checkbox 
+                            checked={selectedIds.has(w.id)}
+                            onCheckedChange={(checked) => toggleSelectRow(w.id, !!checked)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium text-muted-foreground">
+                          {limit === "all" ? index + 1 : (page - 1) * parseInt(limit) + index + 1}
+                        </TableCell>
                         <TableCell className="font-medium whitespace-nowrap">{w.word}</TableCell>
                         <TableCell className="whitespace-nowrap">{w.hint || ""}</TableCell>
                         <TableCell className="whitespace-nowrap">{w.subject_name || ""}</TableCell>
@@ -401,7 +482,14 @@ export default function AdminWordsPage() {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="text-sm text-muted-foreground whitespace-nowrap">
+                    Showing {words.length > 0 ? (limit === "all" ? 1 : (page - 1) * parseInt(limit) + 1) : 0} to{" "}
+                    {limit === "all" 
+                      ? total 
+                      : Math.min(page * parseInt(limit), total)
+                    } of {total} entries
+                  </div>
                   <div className="flex w-[100px] items-center justify-center text-sm font-medium">
                     Page {page} of {limit === "all" ? 1 : Math.ceil(total / parseInt(limit)) || 1}
                   </div>
@@ -521,6 +609,15 @@ export default function AdminWordsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <BulkUploadDialog 
+          open={showBulkUpload} 
+          onOpenChange={setShowBulkUpload} 
+          onSuccess={() => fetchWords(search, selectedSubjectId, page, limit, sortBy, sortOrder)}
+          subjectId={selectedSubjectId !== "all" ? selectedSubjectId : undefined}
+          subjects={subjects}
+        />
+
         <AdminFooter />
       </SidebarInset>
     </SidebarProvider>
