@@ -31,6 +31,8 @@ const floatingWords = [
 export default function HomePage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [landingHeaderTitle, setLandingHeaderTitle] = useState("Level Up Your Brain\nOne Word at a Time")
+  const [landingDescription, setLandingDescription] = useState("Challenge yourself with engaging word puzzles across multiple difficulty levels. Improve vocabulary, boost memory, and have fun while learning.")
 
   useEffect(() => {
     const checkUser = async () => {
@@ -52,6 +54,20 @@ export default function HomePage() {
     }
     checkUser()
   }, [router])
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await fetch("/api/settings", { cache: "no-store" })
+        const data = await res.json()
+        if (data?.landing_header_title) setLandingHeaderTitle(data.landing_header_title)
+        if (data?.landing_description) setLandingDescription(data.landing_description)
+      } catch {
+        // use defaults
+      }
+    }
+    loadSettings()
+  }, [])
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
@@ -91,17 +107,24 @@ export default function HomePage() {
             Brain Training Made Fun
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-balance text-white mb-4 sm:mb-6 leading-tight px-4">
-            Level Up Your Brain
-            <br />
-            <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              One Word at a Time
-            </span>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-balance text-white mb-4 sm:mb-6 leading-tight px-4 whitespace-pre-line">
+            {landingHeaderTitle.includes('\n') ? (
+              <>
+                {landingHeaderTitle.split('\n')[0]}
+                <br />
+                <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                  {landingHeaderTitle.split('\n').slice(1).join('\n')}
+                </span>
+              </>
+            ) : (
+              <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                 {landingHeaderTitle}
+              </span>
+            )}
           </h1>
 
-          <p className="text-base sm:text-lg md:text-xl text-gray-300 text-balance max-w-2xl mb-8 sm:mb-10 px-4">
-            Challenge yourself with engaging word puzzles across multiple difficulty levels. Improve vocabulary, boost
-            memory, and have fun while learning.
+          <p className="text-base sm:text-lg md:text-xl text-gray-300 text-balance max-w-2xl mb-8 sm:mb-10 px-4 whitespace-pre-line">
+            {landingDescription}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-12 sm:mb-16 w-full max-w-md px-4">

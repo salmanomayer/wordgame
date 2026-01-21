@@ -25,7 +25,23 @@ CREATE TABLE IF NOT EXISTS admin_permissions (
   UNIQUE(role, resource)
 );
 
--- 2. PLAYERS & AUTHENTICATION
+-- 2. SITE SETTINGS
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS site_settings (
+  id INTEGER PRIMARY KEY,
+  title TEXT,
+  logo_url TEXT,
+  footer_text TEXT,
+  admin_footer_text TEXT,
+  admin_footer_links JSONB DEFAULT '[]'::jsonb,
+  landing_header_title TEXT,
+  landing_header_subtitle TEXT,
+  landing_description TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. PLAYERS & AUTHENTICATION
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS players (
@@ -69,7 +85,7 @@ CREATE TABLE IF NOT EXISTS player_logs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. GAME CONTENT (SUBJECTS & WORDS)
+-- 4. GAME CONTENT (SUBJECTS & WORDS)
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS subjects (
@@ -95,7 +111,7 @@ CREATE TABLE IF NOT EXISTS words (
   wrong_options TEXT[]
 );
 
--- 4. GAME CONFIGURATION (GAMES & STAGES)
+-- 5. GAME CONFIGURATION (GAMES & STAGES)
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS games (
@@ -135,7 +151,7 @@ CREATE TABLE IF NOT EXISTS game_stage_subjects (
   PRIMARY KEY (stage_id, subject_id)
 );
 
--- 5. GAMEPLAY (SESSIONS & ANSWERS)
+-- 6. GAMEPLAY (SESSIONS & ANSWERS)
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS game_sessions (
@@ -162,7 +178,7 @@ CREATE TABLE IF NOT EXISTS game_answers (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. INDEXES
+-- 7. INDEXES
 -- -----------------------------------------------------------------------------
 
 CREATE INDEX IF NOT EXISTS idx_words_subject ON words(subject_id);
