@@ -38,25 +38,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const paramsArr: any[] = []
       let idx = 1
 
-      constraints.push(`gs.subject_id = ANY($${idx})`)
-      paramsArr.push(subjectIds)
+      // Instead of filtering by subject_id (which might change or be shared), filter by game_id.
+      // This ensures we see ALL sessions for this specific game, even if subjects were removed.
+      constraints.push(`gs.game_id = $${idx}`)
+      paramsArr.push(id)
       idx++
 
-      if (game.start_time) {
-        constraints.push(`gs.completed_at >= $${idx}`)
-        paramsArr.push(game.start_time)
-        idx++
-      }
-      if (game.end_time) {
-        constraints.push(`gs.completed_at <= $${idx}`)
-        paramsArr.push(game.end_time)
-        idx++
-      }
-      if (game.difficulty) {
-        constraints.push(`LOWER(gs.difficulty) = LOWER($${idx})`)
-        paramsArr.push(game.difficulty)
-        idx++
-      }
+      // constraints.push(`gs.subject_id = ANY($${idx})`)
+      // paramsArr.push(subjectIds)
+      // idx++
+
+      // if (game.start_time) {
+      //   constraints.push(`gs.completed_at >= $${idx}`)
+      //   paramsArr.push(game.start_time)
+      //   idx++
+      // }
+      // if (game.end_time) {
+      //   constraints.push(`gs.completed_at <= $${idx}`)
+      //   paramsArr.push(game.end_time)
+      //   idx++
+      // }
+      // if (game.difficulty) {
+      //   constraints.push(`LOWER(gs.difficulty) = LOWER($${idx})`)
+      //   paramsArr.push(game.difficulty)
+      //   idx++
+      // }
       constraints.push("gs.completed_at IS NOT NULL")
 
       const whereClause = constraints.length ? `WHERE ${constraints.join(" AND ")}` : ""
@@ -74,7 +80,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           gs.completed_at,
           p.display_name,
           p.email,
-          st.title AS stage_title
+          CASE 
+              WHEN st.id IS NOT NULL THEN 
+                  st.title || ' (' || st.order_index + 1 || '/' || (SELECT COUNT(*) FROM game_stages WHERE game_id = $1) || ')'
+              ELSE NULL 
+          END AS stage_status
         FROM game_sessions gs
         JOIN players p ON p.id = gs.player_id
         JOIN subjects s ON s.id = gs.subject_id

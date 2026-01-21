@@ -23,7 +23,7 @@ export async function signPlayerToken(player: PlayerUser) {
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(player.id)
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime("1h")
     .sign(PLAYER_JWT_SECRET)
 }
 

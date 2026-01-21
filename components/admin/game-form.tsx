@@ -113,10 +113,15 @@ export function GameForm({ initialData, isEdit }: GameFormProps) {
 
     setLoading(true)
     const token = localStorage.getItem("admin_token")
+    
+    // Convert local time strings to ISO strings (UTC) for storage
+    const formattedStartTime = startTime ? new Date(startTime).toISOString() : null
+    const formattedEndTime = endTime ? new Date(endTime).toISOString() : null
+
     const payload = {
       title,
-      start_time: startTime || null,
-      end_time: endTime || null,
+      start_time: formattedStartTime,
+      end_time: formattedEndTime,
       correct_marks: Number(correctMarks),
       time_per_word: Number(timePerWord),
       word_count: Number(wordCount),

@@ -178,6 +178,8 @@ export default function ChallengePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {games.map((g) => {
                   const now = new Date()
+                  // The backend returns timestamps in UTC (e.g. 2026-01-21T16:20:00+00).
+                  // new Date() parses this correctly to local time.
                   const startTime = g.start_time ? new Date(g.start_time) : null
                   const endTime = g.end_time ? new Date(g.end_time) : null
                   

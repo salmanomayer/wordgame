@@ -91,8 +91,31 @@ export async function GET(request: NextRequest) {
       }
       
       // If we found words dynamically, use that count. Otherwise fall back to DB setting.
-      // The user wants "actual count", so dynamic is preferred.
-      const displayWordCount = totalAvailableWords > 0 ? totalAvailableWords : g.word_count
+      // Priority: Configured word_count > Dynamic total
+      // But we need to check if word_count is meant to be "ALL" (usually 0 or null).
+      // However, we need to sum the CONFIGURED word counts if stages exist.
+      
+      let displayWordCount = 0;
+      
+      if (hasStages) {
+          // Sum CONFIGURED word counts from stages
+          const { rows: stages } = await db.query(
+             `SELECT word_count FROM game_stages WHERE game_id = $1`,
+             [g.id]
+          )
+          const configuredSum = stages.reduce((acc: number, s: any) => acc + (s.word_count || 0), 0)
+          
+          // If configured sum > 0, use it. Else use total available.
+          displayWordCount = configuredSum > 0 ? configuredSum : totalAvailableWords;
+      } else {
+          // Single stage
+          displayWordCount = (g.word_count && g.word_count > 0) ? g.word_count : totalAvailableWords;
+      }
+      
+      // Fallback if something is 0 but we have available words (shouldn't happen if logic is correct)
+      if (displayWordCount === 0 && totalAvailableWords > 0) {
+          displayWordCount = totalAvailableWords;
+      }
 
       result.push({
         id: g.id,

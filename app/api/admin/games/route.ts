@@ -118,7 +118,9 @@ export async function POST(request: NextRequest) {
           gameInsertCols.push("attempts_limit")
           gameInsertValues.push(attempts_limit ?? null)
         }
-        const placeholders = gameInsertValues.map((_, i) => `$${i + 1}`).join(", ")
+        
+        const placeholders = gameInsertValues.map((val, i) => `$${i + 1}`).join(", ")
+
         const gameRes = await client.query(
           `INSERT INTO games (${gameInsertCols.join(", ")}) VALUES (${placeholders}) RETURNING *`,
           gameInsertValues,

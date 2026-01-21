@@ -38,7 +38,7 @@ interface SessionRow {
   words_completed: number
   total_words: number
   completed_at: string
-  stage_title?: string
+  stage_status?: string
 }
 
 export default function AdminResultsPage() {
@@ -348,11 +348,11 @@ export default function AdminResultsPage() {
                       <TableCell>{s.display_name || s.email || s.player_id}</TableCell>
                       <TableCell>
                         <div>{s.subject_name}</div>
-                        {s.stage_title && <div className="text-xs text-muted-foreground">{s.stage_title}</div>}
+                        {s.stage_status && <div className="text-xs text-muted-foreground">{s.stage_status}</div>}
                       </TableCell>
                       <TableCell>
                         <div className="uppercase">{s.difficulty}</div>
-                        {s.stage_title && <div className="text-xs text-muted-foreground">{s.stage_title}</div>}
+                        {s.stage_status && <div className="text-xs text-muted-foreground">{s.stage_status}</div>}
                       </TableCell>
                       <TableCell>{s.score}</TableCell>
                       <TableCell>

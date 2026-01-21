@@ -99,15 +99,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Subject ID is required" }, { status: 400 })
     }
 
-    // Dynamic: Use actual word count from the subject
-    // This ensures that if words are added to the subject, the game includes them immediately
+    // Dynamic: Check if we should use all words or configured limit
+    // If totalWords (from stage/game config) is > 0, we respect it.
+    // If it's 0 or null, we use all available words.
+    // Also, we ensure totalWords doesn't exceed available words.
     if (targetSubjectId) {
         const { rows: countRows } = await db.query(
             "SELECT COUNT(*)::int as cnt FROM words WHERE subject_id = $1 AND is_active = TRUE",
             [targetSubjectId]
         )
         const actualCount = countRows[0]?.cnt || 0
-        if (actualCount > 0) {
+        
+        if (totalWords > 0) {
+            // If configured, cap it at actual available count to avoid errors
+            totalWords = Math.min(totalWords, actualCount)
+        } else {
+            // If not configured (0), use all available
             totalWords = actualCount
         }
     }
