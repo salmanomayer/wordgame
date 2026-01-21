@@ -63,3 +63,18 @@ INSERT INTO words (word, hint, subject_id) VALUES
   ('NEUTRON', 'Subatomic particle with no charge', '33333333-3333-3333-3333-333333333333'),
   ('ENTROPY', 'Measure of disorder in a system', '33333333-3333-3333-3333-333333333333')
 ON CONFLICT DO NOTHING;
+
+-- 5. SEED SITE SETTINGS
+INSERT INTO site_settings (id, title, landing_header_title, landing_header_subtitle, landing_description) VALUES
+(
+  1, 
+  'Word Puzzle Game', 
+  'Level Up Your Brain One Word at a Time', 
+  'Challenge yourself with engaging word puzzles across multiple difficulty levels. Improve vocabulary, boost memory, and have fun while learning.',
+  'Challenge yourself with engaging word puzzles across multiple difficulty levels. Improve vocabulary, boost memory, and have fun while learning.'
+)
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  landing_header_title = EXCLUDED.landing_header_title,
+  landing_header_subtitle = EXCLUDED.landing_header_subtitle,
+  landing_description = EXCLUDED.landing_description;
