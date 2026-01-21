@@ -31,14 +31,23 @@ function generatePuzzle(
   diff: "easy" | "medium" | "hard",
 ): { missingIndex: number[]; options: string[] } {
   const wordUpper = word.toUpperCase()
-  const gapCount = diff === "easy" ? 1 : diff === "medium" ? 2 : 3
+  // Ensure we don't try to create more gaps than non-space characters
+  const nonSpaceCount = wordUpper.replace(/\s/g, '').length
+  const gapCount = Math.min(diff === "easy" ? 1 : diff === "medium" ? 2 : 3, nonSpaceCount)
 
   console.log("[v0] Generating puzzle for:", wordUpper, "difficulty:", diff, "gaps:", gapCount)
 
   const indices: number[] = []
-  while (indices.length < Math.min(gapCount, wordUpper.length)) {
+  let attempts = 0
+  const maxAttempts = wordUpper.length * 5 // Safety limit
+
+  while (indices.length < gapCount && attempts < maxAttempts) {
+    attempts++
     const idx = Math.floor(Math.random() * wordUpper.length)
-    if (!indices.includes(idx)) indices.push(idx)
+    // Only pick index if it's not a space and not already picked
+    if (!indices.includes(idx) && wordUpper[idx] !== ' ') {
+      indices.push(idx)
+    }
   }
 
   const missingIndex = indices.sort((a, b) => a - b)
@@ -60,12 +69,19 @@ function generatePuzzle(
     }
   }
 
-  const options = [correctLetters, ...wrongOptions].sort(() => Math.random() - 0.5)
+  const options = [correctLetters, ...wrongOptions].map(opt => {
+    if (diff === 'hard' && opt.length > 1) {
+       return opt.split('').sort(() => Math.random() - 0.5).join('')
+    }
+    return opt
+  }).sort(() => Math.random() - 0.5)
 
   console.log("[v0] Generated options:", options)
 
   return { missingIndex, options }
 }
+
+const normalizeStr = (str: string) => str.split('').sort().join('').toUpperCase()
 
 export default function GamePage() {
   const params = useParams()
@@ -176,10 +192,47 @@ export default function GamePage() {
                     if (progress.game.correct_marks) {
                         setPointsPerWord(progress.game.correct_marks)
                     }
+                    
+                    // Only enable countdown timer if there is an attempts limit AND a time limit
+                    // Actually, if time_per_word is set, it SHOULD count down for that word regardless of attempts limit
+                    // The "attempts limit" logic was likely about "Game Over on timeout", but user says "count down use by given second set in the bd"
+                    // If time_per_word is set, we should use it.
+                    // The previous instruction was: "if the game do not have any attemp limit if the player play game then try again or play agian it do not use countdown."
+                    // This implies: Unlimited attempts -> No countdown. Limited attempts -> Countdown.
+                    // But now user says: "time per word second setted to 10, but in the play no count down."
+                    // Checking the screenshot, "Attempts per Player" is blank (unlimited).
+                    // So my previous logic disabled it because attempts_limit was null.
+                    
+                    // User Intent Clarification:
+                    // "time per word second setted to 10, but in the play no count down."
+                    // This implies they WANT the countdown even if attempts are unlimited?
+                    // OR they think it's broken.
+                    // Let's re-read the previous instruction:
+                    // "if the game do not have any attemp limit... it do not use countdown."
+                    // "but if the player play random game then no setted time. contdown only for how much time taken to answer."
+                    
+                    // Maybe "Attempts per Player" being blank means "Unlimited attempts to PLAY THE GAME", not "Unlimited lives inside the game"?
+                    // In `app/admin/games/page.tsx` (inferred), "Attempts per Player" usually means how many times they can play the whole session.
+                    
+                    // If the user explicitly sets "Time per Word" in the Admin UI (as seen in screenshot 1), they expect that time limit to apply to each word.
+                    // The confusion might be around "Attempts Limit" vs "Time Limit".
+                    // If I set a time limit, I expect a countdown.
+                    // The previous request said: "if the game do not have any attemp limit ... it do not use countdown."
+                    
+                    // Let's assume the user wants the countdown IF `time_per_word` is set > 0.
+                    // The previous logic `if (progress.game.time_per_word && progress.game.attempts_limit)` is preventing it because attempts_limit is null.
+                    
+                    // Revised Logic:
+                    // If `time_per_word` is set, use it.
+                    // The previous request might have been misunderstood or phrasing was tricky.
+                    // "if the player play random game then no setted time" -> Random game has no `time_per_word` in DB usually (or we don't fetch it).
+                    // Challenge game HAS `time_per_word` in DB.
+                    
                     if (progress.game.time_per_word) {
                         setTimePerWord(progress.game.time_per_word)
                         setWordTimeLeft(progress.game.time_per_word)
                     }
+                    
                     if (progress.game.attempts_limit) {
                         setAttemptsLimit(progress.game.attempts_limit)
                     }
@@ -284,7 +337,7 @@ export default function GamePage() {
         .map((idx) => currentWord.word[idx])
         .join("")
         .toUpperCase()
-        isCorrect = selectedOption.toUpperCase() === correctLetters
+        isCorrect = normalizeStr(selectedOption) === normalizeStr(correctLetters)
     
         if (isCorrect) {
           const newScore = score + pointsPerWord
@@ -473,7 +526,7 @@ export default function GamePage() {
       return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
     }
 
-    const accuracy = Math.round((score / 50) * 100)
+    const accuracy = Math.round((score / maxScore) * 100) || 0
 
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-950 p-4 sm:p-6 overflow-hidden">
@@ -505,9 +558,13 @@ export default function GamePage() {
             </div>
 
             <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent mb-2">
-              {nextStageId ? "Stage Complete!" : randomPraise}
+              {currentStageTitle || (nextStageId ? "Stage Complete!" : randomPraise)}
             </CardTitle>
-            <p className="text-slate-400 text-sm sm:text-base">{nextStageId ? "Great job! Ready for the next challenge?" : "Game Complete!"}</p>
+            <p className="text-slate-400 text-sm sm:text-base">
+              {nextStageId 
+                ? "Great job! Ready for the next challenge?" 
+                : "Game Complete! You've mastered this challenge."}
+            </p>
           </CardHeader>
 
           <CardContent className="text-center space-y-6 px-6 pb-8">
@@ -525,7 +582,7 @@ export default function GamePage() {
             {/* Stats Grid - 3 columns with time taken */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-slate-800/60 backdrop-blur rounded-xl p-4 border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
-                <div className="text-xl sm:text-2xl font-bold text-emerald-400">{Math.floor(score / 10)}/5</div>
+                <div className="text-xl sm:text-2xl font-bold text-emerald-400">{Math.floor(score / pointsPerWord)}/{words.length}</div>
                 <p className="text-slate-400 text-xs sm:text-sm mt-1">Correct</p>
               </div>
               <div className="bg-slate-800/60 backdrop-blur rounded-xl p-4 border border-slate-700/50 hover:border-teal-500/50 transition-colors">
@@ -667,6 +724,51 @@ export default function GamePage() {
     .split("")
     .map((letter, idx) => (currentWord.missingIndex.includes(idx) ? "_" : letter))
 
+  // Group letters into words based on spaces
+  const renderWord = () => {
+    // We need to reconstruct the display respecting word boundaries
+    // The original word might have spaces.
+    // currentWord.word is the full string (e.g. "HELLO WORLD")
+    // wordDisplay is the array of characters with gaps (e.g. ['H', 'E', '_', 'L', 'O', ' ', 'W', 'O', 'R', 'L', 'D'])
+    
+    // Split the original word by space to know the lengths of each part
+    const wordParts = currentWord.word.split(' ');
+    let globalIdx = 0;
+
+    return (
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+            {wordParts.map((part, partIndex) => {
+                const partLength = part.length;
+                const partDisplay = wordDisplay.slice(globalIdx, globalIdx + partLength);
+                // Advance globalIdx by length + 1 (for space)
+                globalIdx += partLength + 1; 
+
+                return (
+                    <div key={partIndex} className="flex gap-1 sm:gap-2">
+                        {partDisplay.map((char, charIdx) => {
+                             // The index in the original word string corresponding to this character
+                             // We need this to check if it's a gap
+                             // Actually, `char` is already "_" if it's a gap.
+                             
+                             return (
+                                <span
+                                    key={charIdx}
+                                    className={`
+                                        text-4xl sm:text-5xl md:text-6xl font-bold tracking-wider
+                                        ${char === "_" ? "text-cyan-400 underline underline-offset-8" : "text-white"}
+                                    `}
+                                >
+                                    {char}
+                                </span>
+                             )
+                        })}
+                    </div>
+                )
+            })}
+        </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-teal-800 to-blue-900 p-4 sm:p-6">
       <div className="container mx-auto max-w-4xl py-6 sm:py-8">
@@ -740,18 +842,7 @@ export default function GamePage() {
 
             {/* Word Display */}
             <div className="bg-gradient-to-br from-emerald-900/50 to-teal-900/50 backdrop-blur-sm border border-emerald-700 rounded-2xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
-              <div className="flex justify-center gap-1 sm:gap-2 text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-wider">
-                {wordDisplay.map((char, idx) => (
-                  <span
-                    key={idx}
-                    className={
-                      currentWord.missingIndex.includes(idx) ? "text-cyan-400 underline underline-offset-8" : ""
-                    }
-                  >
-                    {char}
-                  </span>
-                ))}
-              </div>
+              {renderWord()}
             </div>
 
             {/* Options Grid */}
@@ -761,7 +852,7 @@ export default function GamePage() {
                   .map((idx) => currentWord.word[idx])
                   .join("")
                   .toUpperCase()
-                const isCorrectOption = option.toUpperCase() === correctLetters
+                const isCorrectOption = normalizeStr(option) === normalizeStr(correctLetters)
 
                 return (
                   <button
@@ -776,7 +867,7 @@ export default function GamePage() {
                           : "bg-emerald-800/50 border-emerald-700 text-white hover:bg-emerald-700/50 hover:border-emerald-600 active:scale-95"
                     } ${feedback ? "cursor-not-allowed" : "cursor-pointer"}`}
                   >
-                    {option}
+                    {option.split('').join(', ')}
                   </button>
                 )
               })}

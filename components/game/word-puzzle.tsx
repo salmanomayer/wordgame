@@ -101,9 +101,17 @@ export function WordPuzzle({
     const diff = (difficulty || "medium").toLowerCase()
     const targetGaps = diff === "easy" ? 1 : diff === "hard" ? 3 : 2
     const positions: number[] = []
-    while (positions.length < targetGaps && wordText.length > 0) {
+    const nonSpaceCount = wordText.replace(/\s/g, '').length
+    
+    // Safety break to prevent infinite loops if word is too short or has too many spaces
+    const maxGaps = Math.min(targetGaps, nonSpaceCount)
+    let attempts = 0
+    const maxAttempts = wordText.length * 5
+
+    while (positions.length < maxGaps && attempts < maxAttempts) {
+      attempts++
       const pos = Math.floor(rng() * wordText.length)
-      if (!positions.includes(pos)) {
+      if (!positions.includes(pos) && wordText[pos] !== ' ') {
         if (diff === "medium") {
           const adjacent = positions.some((p) => Math.abs(p - pos) === 1)
           if (adjacent) continue
@@ -111,6 +119,11 @@ export function WordPuzzle({
         positions.push(pos)
       }
     }
+    
+    if (diff !== "hard") {
+        positions.sort((a, b) => a - b)
+    }
+
     const unresolvedPositions = positions.slice(currentGapIndex)
     const correctLetters = unresolvedPositions.map((pos) => wordText[pos])
 
@@ -187,6 +200,42 @@ export function WordPuzzle({
           })
           .join("")
       : ""
+
+  const renderWord = () => {
+    return (
+      <div className="flex flex-wrap justify-center gap-2 mb-6">
+        {displayWord.split(" ").map((wordPart, wordIndex) => (
+          <div key={wordIndex} className="flex flex-nowrap">
+            {wordPart.split("").map((char, charIndex) => {
+              // Calculate global index if needed, but here we just need to display
+              // We need to map back to original word structure if we want to track "_"
+              // But displayWord already has "_" in place of missing letters.
+              // So we just render what we have in displayWord.
+              // However, displayWord joined everything.
+              // Let's re-split by space to respect word boundaries.
+              
+              const isGap = char === "_"
+              return (
+                <span
+                  key={`${wordIndex}-${charIndex}`}
+                  className={`
+                    text-4xl md:text-6xl font-bold tracking-wider font-mono
+                    ${isGap ? "text-blue-400 inline-block mx-0.5 border-b-4 border-blue-400 min-w-[1ch] text-center" : "text-white inline-block mx-0.5"}
+                  `}
+                >
+                  {isGap ? "\u00A0" : char}
+                </span>
+              )
+            })}
+            {/* Add space between words unless it's the last word */}
+            {wordIndex < displayWord.split(" ").length - 1 && (
+               <span className="w-4 md:w-8 inline-block"></span>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   const triggerFireworks = useCallback((intensity: "small" | "large" = "small") => {
     const count = intensity === "large" ? 5 : 2
@@ -354,16 +403,7 @@ export function WordPuzzle({
 
       <Card className="bg-slate-800/30 border-slate-700/50 p-8 backdrop-blur-sm">
         <div className="text-center">
-          <div className="text-5xl md:text-7xl font-bold text-white tracking-wider mb-6 font-mono">
-            {displayWord.split("").map((char, i) => (
-              <span
-                key={i}
-                className={char === "_" ? "text-blue-400 inline-block mx-1 border-b-4 border-blue-400 w-12" : ""}
-              >
-                {char === "_" ? "\u00A0" : char}
-              </span>
-            ))}
-          </div>
+          {renderWord()}
 
           {isCorrect !== null && (
             <div className={`text-xl font-semibold mt-4 ${isCorrect ? "text-green-400" : "text-red-400"}`}>

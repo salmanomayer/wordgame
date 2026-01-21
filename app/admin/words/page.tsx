@@ -71,8 +71,10 @@ export default function AdminWordsPage() {
   // Action states
   const [editingWord, setEditingWord] = useState<Word | null>(null)
   const [deletingWord, setDeletingWord] = useState<Word | null>(null)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [addFormData, setAddFormData] = useState({ word: "", hint: "", subject_id: "" })
   const [editFormData, setEditFormData] = useState({ word: "", hint: "", subject_id: "", is_active: true })
   
   const router = useRouter()
@@ -282,6 +284,34 @@ export default function AdminWordsPage() {
     }
   }
 
+  const handleAddWord = async () => {
+    if (!addFormData.word || !addFormData.subject_id) {
+      toast({ title: "Error", description: "Please fill in word and subject", variant: "destructive" })
+      return
+    }
+
+    const token = localStorage.getItem("admin_token")
+    try {
+      const response = await fetch("/api/admin/words", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(addFormData),
+      })
+      if (!response.ok) throw new Error("Failed to create word")
+      
+      toast({ title: "Success", description: "Word created successfully" })
+      setAddFormData({ word: "", hint: "", subject_id: "" }) // Reset form
+      setIsAddDialogOpen(false)
+      fetchWords(search, selectedSubjectId, page, limit, sortBy, sortOrder)
+    } catch (error) {
+      console.error("Create word error:", error)
+      toast({ title: "Error", description: "Failed to create word", variant: "destructive" })
+    }
+  }
+
   if (loading) {
     return (
       <SidebarProvider>
@@ -314,6 +344,10 @@ export default function AdminWordsPage() {
               <p className="text-muted-foreground">Add, edit, and manage your word database</p>
             </div>
             <div className="flex gap-2">
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Word
+              </Button>
               <Button onClick={() => setShowBulkUpload(true)} variant="outline">
                 <Upload className="mr-2 h-4 w-4" />
                 Bulk Upload
@@ -537,6 +571,58 @@ export default function AdminWordsPage() {
           </Card>
         </div>
         
+        {/* Add Word Dialog */}
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Word</DialogTitle>
+              <DialogDescription>
+                Add a single word to the database.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-word">Word</Label>
+                <Input
+                  id="add-word"
+                  placeholder="e.g. ELEPHANT"
+                  value={addFormData.word}
+                  onChange={(e) => setAddFormData({ ...addFormData, word: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="add-hint">Hint</Label>
+                <Input
+                  id="add-hint"
+                  placeholder="e.g. A large mammal with a trunk"
+                  value={addFormData.hint}
+                  onChange={(e) => setAddFormData({ ...addFormData, hint: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Subject</Label>
+                <Select 
+                  value={addFormData.subject_id} 
+                  onValueChange={(value) => setAddFormData({ ...addFormData, subject_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddWord}>Add Word</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
