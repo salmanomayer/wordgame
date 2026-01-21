@@ -38,6 +38,7 @@ interface SessionRow {
   words_completed: number
   total_words: number
   completed_at: string
+  stage_title?: string
 }
 
 export default function AdminResultsPage() {
@@ -345,8 +346,14 @@ export default function AdminResultsPage() {
                   paginatedSessions.map((s) => (
                     <TableRow key={s.id}>
                       <TableCell>{s.display_name || s.email || s.player_id}</TableCell>
-                      <TableCell>{s.subject_name}</TableCell>
-                      <TableCell className="uppercase">{s.difficulty}</TableCell>
+                      <TableCell>
+                        <div>{s.subject_name}</div>
+                        {s.stage_title && <div className="text-xs text-muted-foreground">{s.stage_title}</div>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="uppercase">{s.difficulty}</div>
+                        {s.stage_title && <div className="text-xs text-muted-foreground">{s.stage_title}</div>}
+                      </TableCell>
                       <TableCell>{s.score}</TableCell>
                       <TableCell>
                         {s.words_completed}/{s.total_words}

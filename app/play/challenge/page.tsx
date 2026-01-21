@@ -20,6 +20,8 @@ interface Game {
   stage_count: number
   subjects: Subject[]
   attempts_count: number
+  start_time: string | null
+  end_time: string | null
 }
 
 export default function ChallengePage() {
@@ -174,52 +176,88 @@ export default function ChallengePage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {games.map((g) => (
-                  <Card key={g.id} className="bg-gradient-to-r from-emerald-500 to-blue-600 border-none text-white shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 group">
+                {games.map((g) => {
+                  const now = new Date()
+                  const startTime = g.start_time ? new Date(g.start_time) : null
+                  const endTime = g.end_time ? new Date(g.end_time) : null
+                  
+                  const isUpcoming = startTime && now < startTime
+                  const isEnded = endTime && now > endTime
+                  const isAttemptsExhausted = g.attempts_limit !== null && g.attempts_count >= g.attempts_limit
+                  
+                  const isDisabled = isUpcoming || isEnded || isAttemptsExhausted
+
+                  return (
+                  <Card key={g.id} className={`border-none text-white shadow-lg transition-all duration-300 group ${
+                      isDisabled 
+                      ? "bg-slate-700/50 cursor-not-allowed grayscale-[0.5]" 
+                      : "bg-gradient-to-r from-emerald-500 to-blue-600 hover:shadow-2xl hover:scale-105"
+                  }`}>
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        <div className="p-2 rounded-lg bg-white/20 text-white transition-colors">
+                        <div className={`p-2 rounded-lg transition-colors ${isDisabled ? "bg-slate-600/50 text-slate-400" : "bg-white/20 text-white"}`}>
                           <Trophy className="h-6 w-6" />
                         </div>
-                        <span className="text-xs font-mono text-white/80 bg-black/20 px-2 py-1 rounded">
-                          {g.difficulty?.toUpperCase() || "MEDIUM"}
-                        </span>
+                        {isUpcoming && (
+                            <span className="text-xs font-mono bg-yellow-500/80 text-white px-2 py-1 rounded">
+                                UPCOMING
+                            </span>
+                        )}
+                        {isEnded && (
+                            <span className="text-xs font-mono bg-red-500/80 text-white px-2 py-1 rounded">
+                                ENDED
+                            </span>
+                        )}
                       </div>
-                      <CardTitle className="text-white text-xl mt-4 line-clamp-1">{g.title}</CardTitle>
+                      <CardTitle className={`text-xl mt-4 line-clamp-1 ${isDisabled ? "text-slate-300" : "text-white"}`}>{g.title}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="space-y-2 text-sm text-emerald-50">
+                      <div className={`space-y-2 text-sm ${isDisabled ? "text-slate-400" : "text-emerald-50"}`}>
                         <div className="flex justify-between">
                           <span>Words to solve:</span>
-                          <span className="font-semibold text-white">{g.word_count}</span>
+                          <span className={`font-semibold ${isDisabled ? "text-slate-300" : "text-white"}`}>{g.word_count}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Stages:</span>
-                          <span className="font-semibold text-white">{g.stage_count}</span>
+                          <span className={`font-semibold ${isDisabled ? "text-slate-300" : "text-white"}`}>{g.stage_count}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Topic:</span>
-                          <span className="font-semibold text-white line-clamp-1 text-right max-w-[50%]">
-                            {g.subjects.length > 0 ? g.subjects.map((s) => s.name).join(", ") : "Mixed"}
-                          </span>
-                        </div>
+                        {startTime && (
+                            <div className="flex justify-between">
+                              <span>Start:</span>
+                              <span className={`font-semibold ${isDisabled ? "text-slate-300" : "text-white"}`}>
+                                {startTime.toLocaleDateString()} {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                        )}
+                        {endTime && (
+                            <div className="flex justify-between">
+                              <span>End:</span>
+                              <span className={`font-semibold ${isDisabled ? "text-slate-300" : "text-white"}`}>
+                                {endTime.toLocaleDateString()} {endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                        )}
                       </div>
                       
                       <Button 
                         className={`w-full font-bold py-2 shadow-lg backdrop-blur-sm ${
-                            g.attempts_limit !== null && g.attempts_count >= g.attempts_limit
-                            ? "bg-gray-500/50 cursor-not-allowed text-gray-300 border border-gray-600"
+                            isDisabled
+                            ? "bg-gray-600/50 cursor-not-allowed text-gray-400 border border-gray-600"
                             : "bg-white/20 hover:bg-white/30 text-white border border-white/40"
                         }`}
                         onClick={() => {
-                            if (g.attempts_limit === null || g.attempts_count < g.attempts_limit) {
+                            if (!isDisabled) {
                                 handlePlayGame(g)
                             }
                         }}
-                        disabled={g.attempts_limit !== null && g.attempts_count >= g.attempts_limit}
+                        disabled={!!isDisabled}
                       >
-                        {g.attempts_limit !== null && g.attempts_count >= g.attempts_limit ? (
+                        {isAttemptsExhausted ? (
                             <span>Attempts Limit Reached</span>
+                        ) : isUpcoming ? (
+                            <span>Starts Soon</span>
+                        ) : isEnded ? (
+                            <span>Challenge Ended</span>
                         ) : (
                             <>
                                 <Play className="mr-2 h-4 w-4" />
@@ -229,7 +267,7 @@ export default function ChallengePage() {
                       </Button>
                     </CardContent>
                   </Card>
-                ))}
+                )})}
               </div>
             )}
           </CardContent>

@@ -73,10 +73,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           gs.total_words,
           gs.completed_at,
           p.display_name,
-          p.email
+          p.email,
+          st.title AS stage_title
         FROM game_sessions gs
         JOIN players p ON p.id = gs.player_id
         JOIN subjects s ON s.id = gs.subject_id
+        LEFT JOIN game_stages st ON st.id = gs.stage_id
         ${whereClause}
         ORDER BY gs.score DESC, gs.completed_at DESC
         LIMIT 1000

@@ -51,13 +51,58 @@ export async function GET(request: NextRequest) {
         subjects = subjectRows
       }
 
+      // Dynamic Word Count Calculation
+      let totalAvailableWords = 0
+      
+      // Check if game has stages
+      const hasStages = (g.stage_count || 0) > 0
+      
+      if (hasStages) {
+          // Sum words from all stages
+          const { rows: stageSubjects } = await db.query(
+            `SELECT gss.subject_id
+             FROM game_stages gs
+             JOIN game_stage_subjects gss ON gs.id = gss.stage_id
+             WHERE gs.game_id = $1`,
+            [g.id]
+          )
+          
+          for (const s of stageSubjects) {
+              if (s.subject_id) {
+                  const { rows: countRows } = await db.query(
+                      "SELECT COUNT(*)::int as cnt FROM words WHERE subject_id = $1 AND is_active = TRUE",
+                      [s.subject_id]
+                  )
+                  totalAvailableWords += countRows[0].cnt || 0
+              }
+          }
+      } else {
+          // No stages, count words in game subjects
+          // Note: If multiple subjects, we assume the game uses ALL of them? 
+          // Or is it "Pick one subject"?
+          // For the "Games List", we usually show the total "potential" words.
+          if (subjectIds.length > 0) {
+              const { rows: countRows } = await db.query(
+                  "SELECT COUNT(*)::int as cnt FROM words WHERE subject_id = ANY($1) AND is_active = TRUE",
+                  [subjectIds]
+              )
+              totalAvailableWords = countRows[0].cnt || 0
+          }
+      }
+      
+      // If we found words dynamically, use that count. Otherwise fall back to DB setting.
+      // The user wants "actual count", so dynamic is preferred.
+      const displayWordCount = totalAvailableWords > 0 ? totalAvailableWords : g.word_count
+
       result.push({
         id: g.id,
         title: g.title,
         difficulty: g.difficulty,
-        word_count: g.word_count,
+        word_count: displayWordCount,
         attempts_limit: g.attempts_limit ?? null,
         stage_count: g.stage_count ?? 0,
+        start_time: g.start_time,
+        end_time: g.end_time,
         subjects,
         attempts_count: 0 // Will be populated in the next step
       })

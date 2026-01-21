@@ -787,7 +787,7 @@ export default function GamePage() {
         <div className="flex gap-2 sm:gap-3 mb-6 flex-wrap">
            <div className="px-3 sm:px-4 py-2 bg-blue-800/50 backdrop-blur-sm border border-blue-700 rounded-lg flex items-center gap-2">
             <Hash className="w-3 h-3 sm:w-4 sm:h-4 text-blue-200" />
-            <span className="text-white font-mono text-xs sm:text-sm">{gameTitle || `#${gameNumber}`}</span>
+            <span className="text-white font-mono text-xs sm:text-sm">{`#${gameNumber}`}</span>
           </div>
           {(stageNumber && totalStages) && (
               <div className="px-3 sm:px-4 py-2 bg-purple-800/50 backdrop-blur-sm border border-purple-700 rounded-lg flex items-center gap-2">
