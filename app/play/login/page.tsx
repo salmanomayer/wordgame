@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Sparkles } from "lucide-react"
 
 export default function PlayerLoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [employeeId, setEmployeeId] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -23,7 +22,7 @@ export default function PlayerLoginPage() {
     }
   }, [searchParams])
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError(null)
@@ -32,7 +31,7 @@ export default function PlayerLoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ employeeId }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data?.error || "Login failed")
@@ -41,30 +40,6 @@ export default function PlayerLoginPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
     } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleGoogleLogin = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      window.location.href = `/api/auth/oauth/start?provider=google&next=${encodeURIComponent("/play/dashboard")}`
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Google login failed")
-      setIsLoading(false)
-    }
-  }
-
-  const handleFacebookLogin = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      window.location.href = `/api/auth/oauth/start?provider=facebook&next=${encodeURIComponent("/play/dashboard")}`
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Facebook login failed")
       setIsLoading(false)
     }
   }
@@ -87,39 +62,26 @@ export default function PlayerLoginPage() {
               Brain Training Made Fun
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-gray-400">Sign in to continue your brain training journey</p>
+            <p className="text-gray-400">Enter your Employee ID to continue</p>
           </div>
 
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 sm:p-8 shadow-2xl border border-white/10">
-            <form onSubmit={handleEmailLogin} className="space-y-4 sm:space-y-5">
+            <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white text-sm sm:text-base">
-                  Email
+                <Label htmlFor="employeeId" className="text-white text-sm sm:text-base">
+                  Employee ID
                 </Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="employeeId"
+                  type="text"
+                  placeholder="PG0000000"
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
                   required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-indigo-500 h-11 sm:h-12 text-base"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-indigo-500 h-11 sm:h-12 text-base uppercase"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-white text-sm sm:text-base">
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 focus:border-indigo-500 h-11 sm:h-12 text-base"
-                />
-              </div>
+              
               {error && <p className="text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded">{error}</p>}
               <Button
                 type="submit"
@@ -130,55 +92,7 @@ export default function PlayerLoginPage() {
               </Button>
             </form>
 
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => router.push("/play/forgot-password")}
-                className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
-              >
-                Forgot your password?
-              </button>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-white/10" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-transparent px-2 text-gray-400">Or continue with</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleGoogleLogin}
-                  disabled={isLoading}
-                  className="bg-white/5 border-white/20 text-white hover:bg-white/10 h-11 text-base"
-                >
-                  Google
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleFacebookLogin}
-                  disabled={isLoading}
-                  className="bg-white/5 border-white/20 text-white hover:bg-white/10 h-11 text-base"
-                >
-                  Facebook
-                </Button>
-              </div>
-            </div>
-
             <div className="mt-6 text-center space-y-3">
-              <p className="text-sm text-gray-400">
-                Don&apos;t have an account?{" "}
-                <button
-                  onClick={() => router.push("/play/signup")}
-                  className="text-indigo-400 hover:text-indigo-300 font-medium"
-                >
-                  Sign Up
-                </button>
-              </p>
               <Button
                 variant="ghost"
                 onClick={() => router.push("/")}
