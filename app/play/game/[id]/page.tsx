@@ -301,17 +301,55 @@ export default function GamePage() {
     }
   }, [hasStarted, isComplete, words])
 
-  // Countdown Timer Effect
-  useEffect(() => {
-    if (hasStarted && !isComplete && !feedback && timePerWord !== null && wordTimeLeft !== null) {
-        if (wordTimeLeft > 0) {
-             const timerId = setTimeout(() => setWordTimeLeft(t => t !== null ? t - 1 : null), 1000)
-             return () => clearTimeout(timerId)
+  async function completeGame(finalScore: number) {
+    const maxScore = words.length * pointsPerWord
+    
+    if (gameSessionId) {
+      try {
+        await fetch("/api/game/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: gameSessionId,
+            score: finalScore,
+            words_completed: words.length,
+          }),
+        })
+
+        if (gameId) {
+           const progressRes = await fetch(`/api/player/game/${gameId}/progress`)
+           const progress = await progressRes.json().catch(() => null)
+           if (progress && progress.next_stage_id) {
+               setNextStageId(progress.next_stage_id)
+               if (progress.stages) {
+                   const nextStage = progress.stages.find((s: any) => s.id === progress.next_stage_id)
+                   setNextStageTitle(nextStage?.title || "Next Stage")
+               }
+               setIsComplete(true)
+               triggerFireworks("small")
+           } else {
+               setIsComplete(true)
+               triggerFireworks("large")
+               if (finalScore === maxScore) {
+                 const interval = setInterval(() => triggerFireworks("small"), 1000)
+                 setTimeout(() => clearInterval(interval), 5000)
+               }
+           }
         } else {
-             handleAnswer(null) // Trigger timeout
+           setIsComplete(true)
+           triggerFireworks("large")
+           if (finalScore === maxScore) {
+             const interval = setInterval(() => triggerFireworks("small"), 1000)
+             setTimeout(() => clearInterval(interval), 5000)
+           }
         }
+
+      } catch (error) {
+        console.error("[v0] Failed to complete game:", error)
+        setIsComplete(true)
+      }
     }
-  }, [wordTimeLeft, hasStarted, isComplete, feedback, timePerWord])
+  }
 
   const handleAnswer = async (selectedOption: string | null) => {
     if (feedback) return
@@ -386,56 +424,18 @@ export default function GamePage() {
     )
   }
 
-  const completeGame = async (finalScore: number) => {
-    const maxScore = words.length * pointsPerWord
-    
-    if (gameSessionId) {
-      try {
-        await fetch("/api/game/complete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_id: gameSessionId,
-            score: finalScore,
-            words_completed: words.length,
-          }),
-        })
-
-        if (gameId) {
-           const progressRes = await fetch(`/api/player/game/${gameId}/progress`)
-           const progress = await progressRes.json().catch(() => null)
-           if (progress && progress.next_stage_id) {
-               setNextStageId(progress.next_stage_id)
-               if (progress.stages) {
-                   const nextStage = progress.stages.find((s: any) => s.id === progress.next_stage_id)
-                   setNextStageTitle(nextStage?.title || "Next Stage")
-               }
-               setIsComplete(true)
-               triggerFireworks("small")
-           } else {
-               // Game Fully Complete
-               setIsComplete(true)
-               triggerFireworks("large")
-               if (finalScore === maxScore) {
-                 const interval = setInterval(() => triggerFireworks("small"), 1000)
-                 setTimeout(() => clearInterval(interval), 5000)
-               }
-           }
-        } else {
-           setIsComplete(true)
-           triggerFireworks("large")
-           if (finalScore === maxScore) {
-             const interval = setInterval(() => triggerFireworks("small"), 1000)
-             setTimeout(() => clearInterval(interval), 5000)
-           }
-        }
-
-      } catch (error) {
-        console.error("[v0] Failed to complete game:", error)
-        setIsComplete(true) // Fallback
+  useEffect(() => {
+    if (hasStarted && !isComplete && !feedback && timePerWord !== null && wordTimeLeft !== null) {
+      if (wordTimeLeft > 0) {
+        const timerId = setTimeout(() => setWordTimeLeft((t) => (t !== null ? t - 1 : null)), 1000)
+        return () => clearTimeout(timerId)
       }
+      const timeoutId = setTimeout(() => {
+        handleAnswer(null)
+      }, 0)
+      return () => clearTimeout(timeoutId)
     }
-  }
+  }, [wordTimeLeft, hasStarted, isComplete, feedback, timePerWord])
 
   if (words.length === 0) {
     return (

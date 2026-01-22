@@ -55,6 +55,17 @@ interface PlayerLog {
   created_at: string
 }
 
+import * as XLSX from "xlsx"
+
+interface PlayerImportPreview {
+  employee_id: string
+  display_name: string
+  email: string
+  phone_number: string
+  isValid: boolean
+  errors: string[]
+}
+
 export default function AdminPlayersPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
@@ -69,10 +80,15 @@ export default function AdminPlayersPage() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showLogsDialog, setShowLogsDialog] = useState(false)
   const [showPlayerDialog, setShowPlayerDialog] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const [playerLogs, setPlayerLogs] = useState<PlayerLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
+
+  // Import states
+  const [importPreview, setImportPreview] = useState<PlayerImportPreview[]>([])
+  const [importing, setImporting] = useState(false)
   
   // Form states
   const [newPassword, setNewPassword] = useState("")
@@ -137,9 +153,9 @@ export default function AdminPlayersPage() {
     setLoading(true)
     const handle = setTimeout(() => {
       fetchPlayers(search, page, limit, sortBy, sortOrder)
-    }, 250)
+    }, 500) // Increased debounce time for better UX
     return () => clearTimeout(handle)
-  }, [router, fetchPlayers, search, page, limit, sortBy, sortOrder])
+  }, [search, page, limit, sortBy, sortOrder, fetchPlayers, router])
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -391,35 +407,133 @@ export default function AdminPlayersPage() {
     if (!file) return
 
     setUploading(true)
-    const token = localStorage.getItem("admin_token")
-    const formData = new FormData()
-    formData.append("file", file)
-
     try {
-      const response = await fetch("/api/admin/players/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to upload file")
+      const normalizeOptional = (value: any, mode: "email" | "phone") => {
+        if (value === undefined || value === null) return ""
+        const str = String(value).trim()
+        if (!str) return ""
+        const lowered = str.toLowerCase()
+        if (
+          lowered === "-" ||
+          lowered === "–" ||
+          lowered === "—" ||
+          lowered === "n/a" ||
+          lowered === "na" ||
+          lowered === "null" ||
+          lowered === "undefined"
+        ) {
+          return ""
+        }
+        if (mode === "email") return lowered
+        return str
       }
 
-      alert(`Upload processed. Success: ${data.results?.success || 0}, Failed: ${data.results?.failed || 0}`)
-      fetchPlayers(search, page, limit, sortBy, sortOrder)
+      const normalizeEmployeeId = (value: any) => {
+        if (value === undefined || value === null) return ""
+        return String(value).trim().toUpperCase()
+      }
+
+      const arrayBuffer = await file.arrayBuffer()
+      const workbook = XLSX.read(arrayBuffer, { type: "array" })
+      const firstSheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[firstSheetName]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+
+      const previewData: PlayerImportPreview[] = jsonData.map((row: any) => {
+        const employee_id =
+          row["Employee ID"] || row["employee_id"] || row["EmployeeID"] || row["Employee Id"] || ""
+        const display_name = row["Name"] || row["name"] || row["Display Name"] || row["display_name"] || ""
+        const email = row["Email"] || row["email"] || ""
+        const phone_number =
+          row["Mobile Number"] ||
+          row["Mobile"] ||
+          row["Phone"] ||
+          row["phone"] ||
+          row["phone_number"] ||
+          ""
+
+        const normalizedEmployeeId = normalizeEmployeeId(employee_id)
+        const normalizedEmail = normalizeOptional(email, "email")
+        const normalizedPhone = normalizeOptional(phone_number, "phone")
+        const normalizedName = String(display_name ?? "").trim()
+
+        const errors: string[] = []
+        if (!normalizedEmployeeId) errors.push("Missing Employee ID")
+
+        return {
+          employee_id: normalizedEmployeeId,
+          display_name: normalizedName,
+          email: normalizedEmail,
+          phone_number: normalizedPhone,
+          isValid: errors.length === 0,
+          errors,
+        }
+      })
+
+      const seenEmployeeIds = new Map<string, number>()
+      for (const row of previewData) {
+        if (!row.employee_id) continue
+        seenEmployeeIds.set(row.employee_id, (seenEmployeeIds.get(row.employee_id) || 0) + 1)
+      }
+
+      const validatedPreview = previewData.map((row) => {
+        if (row.employee_id && (seenEmployeeIds.get(row.employee_id) || 0) > 1) {
+          return {
+            ...row,
+            isValid: false,
+            errors: Array.from(new Set([...row.errors, "Duplicate Employee ID in file"])),
+          }
+        }
+        return row
+      })
+
+      setImportPreview(validatedPreview)
+      setShowImportDialog(true)
     } catch (error: any) {
-      console.error("Error uploading file:", error)
-      alert(error.message || "Failed to upload file")
+      console.error("Error parsing file:", error)
+      alert("Failed to parse file: " + error.message)
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
         fileInputRef.current.value = "" // Reset input
       }
+    }
+  }
+
+  const handleConfirmImport = async () => {
+    const validRecords = importPreview.filter(p => p.isValid)
+    if (validRecords.length === 0) {
+      alert("No valid records to import.")
+      return
+    }
+
+    setImporting(true)
+    const token = localStorage.getItem("admin_token")
+
+    try {
+      const response = await fetch("/api/admin/players/bulk-import", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ players: validRecords }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to import players")
+      }
+
+      alert(`Import completed.\nSuccess: ${data.results.success}\nFailed: ${data.results.failed}\nErrors: ${data.results.errors.join(", ")}`)
+      setShowImportDialog(false)
+      fetchPlayers(search, page, limit, sortBy, sortOrder)
+    } catch (error: any) {
+      console.error("Error importing players:", error)
+      alert(error.message || "Failed to import players")
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -461,6 +575,7 @@ export default function AdminPlayersPage() {
                     setPage(1)
                   }}
                   className="pl-8"
+                  autoFocus
                 />
               </div>
             </div>
@@ -469,7 +584,7 @@ export default function AdminPlayersPage() {
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept=".xlsx, .xls"
+                accept=".xlsx, .xls, .csv, text/csv"
                 onChange={handleFileChange}
               />
               <Button onClick={handleUploadClick} variant="outline" className="gap-2" disabled={uploading}>
@@ -838,6 +953,62 @@ export default function AdminPlayersPage() {
                   </div>
                 )}
               </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Import Preview</DialogTitle>
+                <DialogDescription>
+                  Review the data from your file before importing. Records with missing Employee ID will be skipped.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Total: {importPreview.length} | Valid: {importPreview.filter(p => p.isValid).length} | Invalid: {importPreview.filter(p => !p.isValid).length}
+                  </div>
+                </div>
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Employee ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importPreview.map((row, i) => (
+                        <TableRow key={i} className={!row.isValid ? "bg-red-50 dark:bg-red-900/20" : ""}>
+                          <TableCell>
+                            {row.isValid ? (
+                              <span className="text-green-600 font-medium">Valid</span>
+                            ) : (
+                              <span className="text-red-600 font-medium text-xs">
+                                {row.errors.join(", ")}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{row.employee_id || "-"}</TableCell>
+                          <TableCell>{row.display_name || "-"}</TableCell>
+                          <TableCell>{row.email || "-"}</TableCell>
+                          <TableCell>{row.phone_number || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowImportDialog(false)}>Cancel</Button>
+                <Button onClick={handleConfirmImport} disabled={importing || importPreview.filter(p => p.isValid).length === 0}>
+                  {importing ? "Importing..." : `Import ${importPreview.filter(p => p.isValid).length} Records`}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
 
