@@ -106,7 +106,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         FROM game_sessions gs
         JOIN players p ON p.id = gs.player_id
         ${whereClause}
-        GROUP BY p.id, p.employee_id, COALESCE(p.display_name, SPLIT_PART(p.email, '@', 1))
+        GROUP BY p.id, p.employee_id, p.display_name, p.email
         ORDER BY total_score DESC
         LIMIT 100
       `

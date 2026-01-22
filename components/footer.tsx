@@ -39,7 +39,7 @@
                 href={links[0].url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 transition-colors font-bold underline decoration-wavy decoration-red-500"
+                className="text-blue-400 hover:text-blue-300 transition-colors font-bold"
               >
                 {links[0].label}
               </Link>
