@@ -98,6 +98,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       const leaderboardSql = `
         SELECT 
           p.id AS player_id,
+          p.employee_id,
           COALESCE(p.display_name, SPLIT_PART(p.email, '@', 1)) AS display_name,
           SUM(gs.score)::int AS total_score,
           COUNT(gs.id)::int AS games_played,
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         FROM game_sessions gs
         JOIN players p ON p.id = gs.player_id
         ${whereClause}
-        GROUP BY p.id, display_name
+        GROUP BY p.id, p.employee_id, COALESCE(p.display_name, SPLIT_PART(p.email, '@', 1))
         ORDER BY total_score DESC
         LIMIT 100
       `

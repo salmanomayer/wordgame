@@ -40,6 +40,7 @@ interface Player {
   created_at: string
   is_active: boolean
   email?: string
+  employee_id?: string
 }
 
 interface PlayerLog {
@@ -69,6 +70,7 @@ interface PlayerImportPreview {
 export default function AdminPlayersPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
+  const [isFetching, setIsFetching] = useState(false)
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState("20")
@@ -107,7 +109,7 @@ export default function AdminPlayersPage() {
   const router = useRouter()
 
   const fetchPlayers = useCallback(
-    async (q: string, p: number, l: string, sort: string, order: string) => {
+    async (q: string, p: number, l: string, sort: string, order: string, signal?: AbortSignal) => {
       const token = localStorage.getItem("admin_token")
       if (!token) {
         router.push("/admin/login")
@@ -123,8 +125,10 @@ export default function AdminPlayersPage() {
       params.set("sort_order", order)
 
       try {
+        setIsFetching(true)
         const response = await fetch(`/api/admin/players?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
+          signal,
         })
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
@@ -134,11 +138,13 @@ export default function AdminPlayersPage() {
         setPlayers(Array.isArray(result.data) ? result.data : [])
         setTotal(result.total || 0)
       } catch (error) {
+        if ((error as any)?.name === "AbortError") return
         console.error("[v0] Error fetching players:", error)
         setPlayers([])
         setTotal(0)
       } finally {
         setLoading(false)
+        setIsFetching(false)
       }
     },
     [router],
@@ -150,11 +156,14 @@ export default function AdminPlayersPage() {
       router.push("/admin/login")
       return
     }
-    setLoading(true)
+    const controller = new AbortController()
     const handle = setTimeout(() => {
-      fetchPlayers(search, page, limit, sortBy, sortOrder)
+      fetchPlayers(search, page, limit, sortBy, sortOrder, controller.signal)
     }, 500) // Increased debounce time for better UX
-    return () => clearTimeout(handle)
+    return () => {
+      clearTimeout(handle)
+      controller.abort()
+    }
   }, [search, page, limit, sortBy, sortOrder, fetchPlayers, router])
 
   const handleSort = (column: string) => {
@@ -568,7 +577,7 @@ export default function AdminPlayersPage() {
               <div className="relative w-full">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search players..."
+                  placeholder="Search name, employee id, email or phone..."
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value)
@@ -608,12 +617,22 @@ export default function AdminPlayersPage() {
             <CardContent>
               <div className="w-full overflow-x-auto rounded-md border">
                 <Table>
-                <TableHeader>
+            <TableHeader>
                   <TableRow>
                     <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("display_name")}>
                       <div className="flex items-center gap-1">
                         Name
                         {sortBy === "display_name" ? (
+                          sortOrder === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer select-none whitespace-nowrap" onClick={() => handleSort("employee_id")}>
+                      <div className="flex items-center gap-1">
+                        Employee ID
+                        {sortBy === "employee_id" ? (
                           sortOrder === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
                         ) : (
                           <ArrowUpDown className="h-4 w-4 text-muted-foreground/50" />
@@ -686,14 +705,15 @@ export default function AdminPlayersPage() {
                 <TableBody>
                   {players.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
-                        No players found
+                      <TableCell colSpan={9} className="text-center">
+                        {isFetching ? "Loading..." : "No players found"}
                       </TableCell>
                     </TableRow>
                   ) : (
                     players.map((player) => (
                       <TableRow key={player.id}>
                         <TableCell className="whitespace-nowrap">{player.display_name || "N/A"}</TableCell>
+                        <TableCell className="whitespace-nowrap font-mono text-sm">{player.employee_id || "-"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{player.email || "N/A"}</TableCell>
                         <TableCell className="whitespace-nowrap">{player.phone_number || "N/A"}</TableCell>
                         <TableCell className="whitespace-nowrap">{player.total_score}</TableCell>

@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
 
       const allowedSortColumns = [
         "display_name",
+        "employee_id",
         "email",
         "phone_number",
         "total_score",
@@ -29,7 +30,8 @@ export async function GET(request: NextRequest) {
       let whereClause = ""
       const params: any[] = []
       if (q?.trim()) {
-        whereClause = " WHERE (display_name ILIKE $1 OR email ILIKE $1 OR phone_number ILIKE $1)"
+        whereClause =
+          " WHERE (display_name ILIKE $1 OR employee_id ILIKE $1 OR email ILIKE $1 OR phone_number ILIKE $1 OR id::text ILIKE $1)"
         params.push(`%${q.trim()}%`)
       }
 
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
       const totalCount = parseInt(countRows[0].count)
 
       let sql = `
-        SELECT id, email, phone_number, display_name, total_score, games_played, is_active, created_at
+        SELECT id, employee_id, email, phone_number, display_name, total_score, games_played, is_active, created_at
         FROM players
         ${whereClause}
         ORDER BY ${validatedSortBy} ${validatedSortOrder}

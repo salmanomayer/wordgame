@@ -22,6 +22,7 @@ interface Game {
 interface LeaderboardEntry {
   player_id: string
   display_name: string
+  employee_id?: string | null
   total_score: number
   games_played: number
   rank: number
@@ -235,12 +236,13 @@ export default function AdminResultsPage() {
                   const rows = filteredLeaderboard.map((l) => ({
                     rank: l.rank,
                     player: l.display_name,
+                    employee_id: l.employee_id || "",
                     total_score: l.total_score,
                     games_played: l.games_played,
                   }))
                   const csv =
-                    "rank,player,total_score,games_played\n" +
-                    rows.map((r) => `${r.rank},${r.player},${r.total_score},${r.games_played}`).join("\n")
+                    "rank,player,employee_id,total_score,games_played\n" +
+                    rows.map((r) => `${r.rank},${r.player},${r.employee_id},${r.total_score},${r.games_played}`).join("\n")
                   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
                   const url = URL.createObjectURL(blob)
                   const a = document.createElement("a")
@@ -281,7 +283,10 @@ export default function AdminResultsPage() {
                   filteredLeaderboard.map((l) => (
                     <TableRow key={l.player_id}>
                       <TableCell>{l.rank}</TableCell>
-                      <TableCell>{l.display_name}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{l.display_name}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{l.employee_id || "-"}</div>
+                      </TableCell>
                       <TableCell>{l.total_score}</TableCell>
                       <TableCell>{l.games_played}</TableCell>
                     </TableRow>
