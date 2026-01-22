@@ -147,7 +147,8 @@ export async function GET(request: NextRequest) {
             const { rows: attemptRows } = await db.query(
                 `SELECT COUNT(*) as count 
                  FROM game_sessions 
-                 WHERE game_id = $1 AND player_id = $2 AND stage_id = $3`,
+                 WHERE game_id = $1 AND player_id = $2 AND stage_id = $3
+                 AND (score > 0 OR words_completed > 0 OR completed_at IS NOT NULL)`,
                 [game.id, auth.playerId, firstStageId]
             );
             attemptsCount = parseInt(attemptRows[0].count, 10);
@@ -156,7 +157,8 @@ export async function GET(request: NextRequest) {
             const { rows: attemptRows } = await db.query(
                 `SELECT COUNT(*) as count 
                  FROM game_sessions 
-                 WHERE game_id = $1 AND player_id = $2 AND (stage_id IS NULL OR stage_id::text = '')`,
+                 WHERE game_id = $1 AND player_id = $2 AND (stage_id IS NULL OR stage_id::text = '')
+                 AND (score > 0 OR words_completed > 0 OR completed_at IS NOT NULL)`,
                 [game.id, auth.playerId]
             );
             attemptsCount = parseInt(attemptRows[0].count, 10);

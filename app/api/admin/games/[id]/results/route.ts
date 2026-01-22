@@ -102,12 +102,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           COALESCE(p.display_name, SPLIT_PART(p.email, '@', 1)) AS display_name,
           SUM(gs.score)::int AS total_score,
           COUNT(gs.id)::int AS games_played,
-          ROW_NUMBER() OVER (ORDER BY SUM(gs.score) DESC) AS rank
+          SUM(EXTRACT(EPOCH FROM (gs.completed_at - gs.started_at)))::int AS total_time_seconds,
+          ROW_NUMBER() OVER (ORDER BY SUM(gs.score) DESC, SUM(EXTRACT(EPOCH FROM (gs.completed_at - gs.started_at))) ASC) AS rank
         FROM game_sessions gs
         JOIN players p ON p.id = gs.player_id
         ${whereClause}
         GROUP BY p.id, p.employee_id, p.display_name, p.email
-        ORDER BY total_score DESC
+        ORDER BY total_score DESC, total_time_seconds ASC
         LIMIT 100
       `
       const { rows: leaderboardRows } = await adminDb.query(leaderboardSql, paramsArr)

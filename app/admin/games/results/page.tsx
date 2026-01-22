@@ -26,6 +26,7 @@ interface LeaderboardEntry {
   total_score: number
   games_played: number
   rank: number
+  total_time_seconds?: number
 }
 
 interface SessionRow {
@@ -92,6 +93,13 @@ export default function AdminResultsPage() {
 
   const [leaderboardSortColumn, setLeaderboardSortColumn] = useState<string | null>(null)
   const [leaderboardSortDirection, setLeaderboardSortDirection] = useState<"asc" | "desc">("asc")
+
+  const formatTime = (seconds: number) => {
+    if (!seconds && seconds !== 0) return "-"
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}m ${secs}s`
+  }
 
   const filteredLeaderboard = useMemo(() => {
     let result = [...leaderboard]
@@ -275,7 +283,7 @@ export default function AdminResultsPage() {
               <TableBody>
                 {filteredLeaderboard.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       No data
                     </TableCell>
                   </TableRow>
@@ -288,6 +296,7 @@ export default function AdminResultsPage() {
                         <div className="text-xs text-muted-foreground font-mono">{l.employee_id || "-"}</div>
                       </TableCell>
                       <TableCell>{l.total_score}</TableCell>
+                      <TableCell>{formatTime(l.total_time_seconds || 0)}</TableCell>
                       <TableCell>{l.games_played}</TableCell>
                     </TableRow>
                   ))

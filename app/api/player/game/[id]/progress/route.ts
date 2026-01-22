@@ -70,6 +70,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             `SELECT started_at
              FROM game_sessions 
              WHERE game_id = $1 AND player_id = $2 AND stage_id = $3
+             AND (score > 0 OR words_completed > 0 OR completed_at IS NOT NULL)
              ORDER BY started_at DESC`,
             [gameId, auth.playerId, firstStageId]
         );
