@@ -193,3 +193,157 @@ CREATE INDEX IF NOT EXISTS idx_game_answers_session ON game_answers(game_session
 CREATE INDEX IF NOT EXISTS idx_player_logs_player_id ON player_logs(player_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_user_id ON password_reset_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_players_employee_id ON players(employee_id);
+
+-- 8. LEADERBOARD FUNCTIONS
+-- -----------------------------------------------------------------------------
+
+-- Drop existing functions to allow changing return type
+DROP FUNCTION IF EXISTS get_weekly_leaderboard(integer, boolean);
+DROP FUNCTION IF EXISTS get_monthly_leaderboard(integer, boolean);
+DROP FUNCTION IF EXISTS get_challenge_leaderboard(integer);
+
+-- Weekly Leaderboard
+CREATE OR REPLACE FUNCTION get_weekly_leaderboard(limit_count integer DEFAULT 10, is_challenge boolean DEFAULT false)
+RETURNS TABLE(
+  player_id uuid, 
+  display_name text, 
+  phone_number text, 
+  total_score integer, 
+  total_time_seconds integer,
+  games_played integer, 
+  rank integer
+)
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  RETURN QUERY
+  SELECT
+    p.id,
+    p.display_name,
+    p.phone_number,
+    COALESCE(SUM(gs.score), 0)::INTEGER as total_score,
+    COALESCE(SUM(EXTRACT(EPOCH FROM (gs.completed_at - gs.started_at))), 0)::INTEGER as total_time_seconds,
+    COUNT(gs.id)::INTEGER as games_played,
+    ROW_NUMBER() OVER (
+        ORDER BY 
+            COALESCE(SUM(gs.score), 0) DESC, 
+            COALESCE(SUM(EXTRACT(EPOCH FROM (gs.completed_at - gs.started_at))), 0) ASC
+    )::INTEGER as rank
+  FROM players p
+  LEFT JOIN game_sessions gs ON p.id = gs.player_id
+    AND gs.completed_at >= NOW() - INTERVAL '7 days'
+    AND gs.completed_at IS NOT NULL
+  LEFT JOIN games g ON gs.game_id = g.id
+  WHERE (
+    CASE
+      WHEN is_challenge THEN g.id IS NOT NULL
+      ELSE g.id IS NULL
+    END
+  )
+  GROUP BY p.id, p.display_name, p.phone_number
+  ORDER BY total_score DESC, total_time_seconds ASC
+  LIMIT limit_count;
+END;
+$function$;
+
+-- Monthly Leaderboard
+CREATE OR REPLACE FUNCTION get_monthly_leaderboard(limit_count integer DEFAULT 10, is_challenge boolean DEFAULT false)
+RETURNS TABLE(
+  player_id uuid, 
+  display_name text, 
+  phone_number text, 
+  total_score integer, 
+  total_time_seconds integer,
+  games_played integer, 
+  rank integer
+)
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  RETURN QUERY
+  SELECT
+    p.id,
+    p.display_name,
+    p.phone_number,
+    COALESCE(SUM(gs.score), 0)::INTEGER as total_score,
+    COALESCE(SUM(EXTRACT(EPOCH FROM (gs.completed_at - gs.started_at))), 0)::INTEGER as total_time_seconds,
+    COUNT(gs.id)::INTEGER as games_played,
+    ROW_NUMBER() OVER (
+        ORDER BY 
+            COALESCE(SUM(gs.score), 0) DESC, 
+            COALESCE(SUM(EXTRACT(EPOCH FROM (gs.completed_at - gs.started_at))), 0) ASC
+    )::INTEGER as rank
+  FROM players p
+  LEFT JOIN game_sessions gs ON p.id = gs.player_id
+    AND gs.completed_at >= NOW() - INTERVAL '30 days'
+    AND gs.completed_at IS NOT NULL
+  LEFT JOIN games g ON gs.game_id = g.id
+  WHERE (
+    CASE
+      WHEN is_challenge THEN g.id IS NOT NULL
+      ELSE g.id IS NULL
+    END
+  )
+  GROUP BY p.id, p.display_name, p.phone_number
+  ORDER BY total_score DESC, total_time_seconds ASC
+  LIMIT limit_count;
+END;
+$function$;
+
+-- Challenge Leaderboard (All-time)
+CREATE OR REPLACE FUNCTION get_challenge_leaderboard(limit_count integer DEFAULT 1000)
+RETURNS TABLE(
+  player_id uuid, 
+  display_name text, 
+  phone_number text, 
+  total_score integer, 
+  total_time_seconds integer,
+  games_played integer, 
+  rank integer
+)
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  RETURN QUERY
+  SELECT
+    p.id,
+    p.display_name,
+    p.phone_number,
+    COALESCE(SUM(gs.score), 0)::INTEGER as total_score,
+    COALESCE(SUM(EXTRACT(EPOCH FROM (gs.completed_at - gs.started_at))), 0)::INTEGER as total_time_seconds,
+    COUNT(gs.id)::INTEGER as games_played,
+    ROW_NUMBER() OVER (
+        ORDER BY 
+            COALESCE(SUM(gs.score), 0) DESC, 
+            COALESCE(SUM(EXTRACT(EPOCH FROM (gs.completed_at - gs.started_at))), 0) ASC
+    )::INTEGER as rank
+  FROM players p
+  JOIN game_sessions gs ON p.id = gs.player_id
+    AND gs.completed_at IS NOT NULL
+  JOIN games g ON gs.game_id = g.id  -- Only include games that have a linked game definition (Challenges)
+  GROUP BY p.id, p.display_name, p.phone_number
+  ORDER BY total_score DESC, total_time_seconds ASC
+  LIMIT limit_count;
+END;
+$function$;
+
+-- 9. TRIGGERS
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION set_default_player_name()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  IF NEW.display_name IS NULL THEN
+    NEW.display_name := SPLIT_PART(NEW.email, '@', 1);
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS set_player_name_on_insert ON players;
+CREATE TRIGGER set_player_name_on_insert
+  BEFORE INSERT ON players
+  FOR EACH ROW
+  EXECUTE FUNCTION set_default_player_name();

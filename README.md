@@ -49,19 +49,32 @@ The following environment variables are automatically configured:
 
 ### Database Setup
 
-1. Run the SQL scripts in order:
-   - `scripts/001_create_tables.sql` - Create all tables and RLS policies
-   - `scripts/002_seed_demo_data.sql` - Add sample subjects and words
-   - `scripts/003_create_player_trigger.sql` - Auto-create player profiles
+1. **Using Docker (Recommended)**
+   The database is automatically set up when running via `docker-compose`. The `postgres` container mounts the initialization scripts from the `./scripts` directory, which are executed in alphabetical order on the first run.
 
-2. Create your first admin user by calling:
-   \`\`\`
+   - `scripts/001_create_tables.sql`: Creates all tables, indexes, functions, and triggers.
+   - `scripts/002_seed_data.sql`: Seeds initial data (Admin user, Permissions, Demo Subjects, Demo Words, Site Settings).
+
+   If you need to reset the database:
+   ```bash
+   docker-compose down -v
+   docker-compose up -d --build
+   ```
+
+2. **Manual Setup**
+   If you are running a local Postgres instance without Docker:
+   - Run `scripts/001_create_tables.sql` to create the schema.
+   - Run `scripts/002_seed_data.sql` to seed the data.
+
+3. Create your first admin user by calling:
+   ```
    POST /api/admin/create
    {
      "email": "admin@example.com",
      "password": "your-secure-password"
    }
-   \`\`\`
+   ```
+   *Note: A default admin user `admin@test.com` / `Admin123!` is created by the seed script.*
 
 ### Running the App
 

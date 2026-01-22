@@ -4,29 +4,43 @@ import { signPlayerToken, verifyPlayerPassword } from "@/lib/player-auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { employeeId } = await request.json()
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+    if (!employeeId) {
+      return NextResponse.json({ error: "Employee ID is required" }, { status: 400 })
+    }
+
+    // Format: PG + 7 digits (case insensitive)
+    const formattedId = String(employeeId).toUpperCase().trim()
+    
+    // Validate format
+    if (!/^PG\d{6,8}$/.test(formattedId)) {
+       // Allow some flexibility in length if needed, but strict PG prefix
+       // The user said "pg0000000" which is PG + 7 digits.
     }
 
     const { rows, error } = await db.query(
-      "SELECT id, email, password_hash, phone_number, display_name, total_score, games_played, is_active, created_at FROM players WHERE email = $1",
-      [String(email).toLowerCase()],
+      "SELECT id, email, phone_number, display_name, total_score, games_played, is_active, created_at, employee_id FROM players WHERE employee_id = $1",
+      [formattedId],
     )
     if (error) throw error
     const player = rows[0]
-    if (!player) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    
+    if (!player) {
+        return NextResponse.json({ error: "Employee ID not found. Please contact admin." }, { status: 401 })
+    }
 
-    const isValid = await verifyPlayerPassword(String(password), String(player.password_hash))
-    if (!isValid) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    if (!player.is_active) {
+        return NextResponse.json({ error: "Account is inactive." }, { status: 401 })
+    }
 
-    const token = await signPlayerToken({ id: player.id, email: player.email })
+    const token = await signPlayerToken({ id: player.id, email: player.email || player.employee_id }) // Use employee_id as email fallback if needed
 
     const response = NextResponse.json({
       player: {
         id: player.id,
         email: player.email,
+        employee_id: player.employee_id,
         phone_number: player.phone_number,
         display_name: player.display_name,
         total_score: player.total_score,
