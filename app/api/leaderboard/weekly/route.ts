@@ -6,7 +6,8 @@ export async function GET(request: NextRequest) {
   const isChallenge = searchParams.get("is_challenge") === "true"
 
   try {
-    const { rows: data, error } = await db.query("SELECT * FROM get_weekly_leaderboard($1, $2)", [10, isChallenge])
+    // Fetch top 1000 to allow finding user's rank context client-side
+    const { rows: data, error } = await db.query("SELECT * FROM get_weekly_leaderboard($1, $2)", [1000, isChallenge])
 
     if (error) throw error
 
