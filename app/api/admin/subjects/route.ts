@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
+import { logAdminAction } from "@/lib/admin-audit"
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async () => {
@@ -20,9 +21,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
-      const { name, description, is_active } = await request.json()
+      const { name, description, is_active } = await req.json()
       const { rows, error } = await adminDb.query(
         "INSERT INTO subjects (name, description, is_active) VALUES ($1, $2, $3) RETURNING *",
         [name, description, is_active]
@@ -31,6 +32,16 @@ export async function POST(request: NextRequest) {
       if (error) throw error
 
       const data = rows[0]
+
+      if (admin?.id) {
+        await logAdminAction({
+          adminId: admin.id,
+          action: "CREATE",
+          resourceType: "SUBJECT",
+          resourceId: data.id,
+          details: { name, description, is_active }
+        })
+      }
 
       return NextResponse.json(data)
     } catch (error) {

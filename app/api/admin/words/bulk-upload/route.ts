@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
+import { logAdminAction } from "@/lib/admin-audit"
 import * as XLSX from "xlsx"
 
 export async function POST(request: NextRequest) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
       const formData = await request.formData()
       const file = formData.get("file") as File
@@ -81,6 +82,20 @@ export async function POST(request: NextRequest) {
           params
         )
         if (error) throw error
+
+        if (admin?.id) {
+          await logAdminAction({
+            adminId: admin.id,
+            action: "IMPORT",
+            resourceType: "WORD",
+            details: { 
+              subject_id: subjectId, 
+              count: wordsToInsert.length, 
+              success: rowCount || 0, 
+              failed: wordsToInsert.length - (rowCount || 0) 
+            }
+          })
+        }
         
         return NextResponse.json({
             success: true,

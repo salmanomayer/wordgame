@@ -2,8 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
 import { transaction } from "@/lib/postgres"
+import { logAdminAction } from "@/lib/admin-audit"
 
 export async function GET(request: NextRequest) {
+  // ... existing GET ...
   return withAdminAuth(request, async () => {
     try {
       const { searchParams } = new URL(request.url)
@@ -62,9 +64,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
-      const body = await request.json()
+      const body = await req.json()
       const { title, start_time, end_time, correct_marks, time_per_word, word_count, difficulty, attempts_limit, subjects, stages } = body
 
       if (!title || !correct_marks) {
@@ -171,6 +173,16 @@ export async function POST(request: NextRequest) {
 
         return game
       })
+
+      if (admin?.id) {
+        await logAdminAction({
+          adminId: admin.id,
+          action: "CREATE",
+          resourceType: "GAME",
+          resourceId: result.id,
+          details: { title, difficulty, stages_count: stages?.length || 0 }
+        })
+      }
 
       return NextResponse.json(result)
     } catch (error) {

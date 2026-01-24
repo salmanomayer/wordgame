@@ -26,7 +26,8 @@ import { AdminFooter } from "@/components/admin/admin-footer"
 interface AdminUserType {
   id: string
   email: string
-  role: string
+  role?: string // Made optional since API might not return it
+  is_active?: boolean
   created_at: string
 }
 
@@ -64,7 +65,7 @@ export default function AdminUsersPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setUsers(Array.isArray(data.users) ? data.users : [])
+        setUsers(Array.isArray(data.data) ? data.data : [])
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error("Failed to fetch users:", errorData.error || response.statusText)
@@ -229,7 +230,7 @@ export default function AdminUsersPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium whitespace-nowrap">{user.email}</TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <Badge className={getRoleBadgeColor(user.role)}>{user.role.replace("_", " ")}</Badge>
+                      <Badge className={getRoleBadgeColor(user.role || 'admin')}>{user.role ? user.role.replace("_", " ") : 'admin'}</Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{new Date(user.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">

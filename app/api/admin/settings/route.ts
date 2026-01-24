@@ -3,6 +3,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
+import { logAdminAction } from "@/lib/admin-audit"
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async () => {
@@ -45,9 +46,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
-      const body = await request.json()
+      const body = await req.json()
       const title = body.title ?? null
       const logo_url = body.logo_url ?? null
       const footer_text = body.footer_text ?? null
@@ -93,6 +94,17 @@ export async function PATCH(request: NextRequest) {
         [title, logo_url, footer_text, admin_footer_text, JSON.stringify(admin_footer_links), landing_header_title, landing_header_subtitle, landing_description],
       )
       const { rows } = await adminDb.query("SELECT * FROM site_settings LIMIT 1")
+
+      if (admin?.id) {
+        await logAdminAction({
+          adminId: admin.id,
+          action: "UPDATE",
+          resourceType: "SETTINGS",
+          resourceId: "1", // Use string for resourceId
+          details: body,
+        })
+      }
+
       return NextResponse.json(rows[0])
     } catch (error) {
       console.error("Failed to update settings:", error)

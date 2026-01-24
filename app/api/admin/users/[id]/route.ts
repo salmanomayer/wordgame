@@ -1,71 +1,85 @@
 import { type NextRequest, NextResponse } from "next/server"
-import bcrypt from "bcryptjs"
+import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
-import { requireAdminWithPermission } from "@/lib/admin-middleware"
+import { hash } from "bcryptjs"
+import { logAdminAction } from "@/lib/admin-audit"
 
-export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const result = await requireAdminWithPermission(request, "admins", "can_update")
-  if (result instanceof NextResponse) return result
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return withAdminAuth(request, async (req, admin) => {
+    try {
+      const { id } = await params
+      const { email, password, role, is_active } = await req.json()
 
-  try {
-    const { id } = await context.params;
-    const { email, password, role } = await request.json()
+      let query = "UPDATE admin_users SET email = COALESCE($1, email), is_active = COALESCE($2, is_active), role = COALESCE($3, role)"
+      const queryParams: any[] = [email, is_active, role]
+      let paramIndex = 4
 
-    const updateData: string[] = []
-    const params: any[] = []
-    let paramIndex = 1
+      if (password) {
+        const passwordHash = await hash(password, 10)
+        query += `, password_hash = $${paramIndex}`
+        queryParams.push(passwordHash)
+        paramIndex++
+      }
 
-    if (email) {
-      updateData.push(`email = $${paramIndex}`)
-      params.push(email)
-      paramIndex++
+      query += `, updated_at = NOW() WHERE id = $${paramIndex} RETURNING id, email, role, is_active, created_at`
+      queryParams.push(id)
+
+      const { rows } = await adminDb.query(query, queryParams)
+
+      if (rows.length === 0) {
+        return NextResponse.json({ error: "Admin user not found" }, { status: 404 })
+      }
+
+      if (admin?.id) {
+        await logAdminAction({
+          adminId: admin.id,
+          action: "UPDATE",
+          resourceType: "ADMIN_USER",
+          resourceId: id,
+          details: { email, role, is_active, password_changed: !!password }
+        })
+      }
+
+      return NextResponse.json(rows[0])
+    } catch (error: any) {
+      console.error("[v0] Update admin user error:", error)
+      if (error.code === '23505') {
+          return NextResponse.json({ error: "Email already exists" }, { status: 409 })
+      }
+      return NextResponse.json({ error: "Failed to update admin user" }, { status: 500 })
     }
-    if (role) {
-      updateData.push(`role = $${paramIndex}`)
-      params.push(role)
-      paramIndex++
-    }
-    if (password) {
-      const passwordHash = await bcrypt.hash(password, 10)
-      updateData.push(`password_hash = $${paramIndex}`)
-      params.push(passwordHash)
-      paramIndex++
-    }
-
-    if (updateData.length === 0) {
-      return NextResponse.json({ message: "No update data provided" }, { status: 400 })
-    }
-
-    params.push(id) // Add id as the last parameter
-
-    const { rows, error } = await adminDb.query(
-      `UPDATE admin_users SET ${updateData.join(', ')} WHERE id = $${paramIndex} RETURNING id, email, role`,
-      params
-    )
-
-    if (error) throw error
-    if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 })
-
-    return NextResponse.json({ user: rows[0] })
-  } catch (error) {
-    console.error("Failed to update admin user:", error)
-    return NextResponse.json({ error: "Failed to update user" }, { status: 500 })
-  }
+  })
 }
 
-export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const result = await requireAdminWithPermission(request, "admins", "can_delete")
-  if (result instanceof NextResponse) return result
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  return withAdminAuth(request, async (req, admin) => {
+    try {
+      const { id } = await params
+      
+      // Prevent deleting self
+      if (admin?.id === id) {
+          return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 })
+      }
 
-  try {
-    const { id } = await context.params;
-    const { error } = await adminDb.query("DELETE FROM admin_users WHERE id = $1", [id])
+      const { rowCount } = await adminDb.query("DELETE FROM admin_users WHERE id = $1", [id])
 
-    if (error) throw error
+      if (rowCount === 0) {
+        return NextResponse.json({ error: "Admin user not found" }, { status: 404 })
+      }
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("Failed to delete admin user:", error)
-    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 })
-  }
+      if (admin?.id) {
+        await logAdminAction({
+          adminId: admin.id,
+          action: "DELETE",
+          resourceType: "ADMIN_USER",
+          resourceId: id
+        })
+      }
+
+      return NextResponse.json({ success: true })
+    } catch (error) {
+      console.error("[v0] Delete admin user error:", error)
+      return NextResponse.json({ error: "Failed to delete admin user" }, { status: 500 })
+    }
+  })
 }
