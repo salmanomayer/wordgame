@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
-
 import { hash } from "bcryptjs"
+import { logAdminAction } from "@/lib/admin-audit"
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, async () => {
@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
         "games_played",
         "created_at",
         "is_active",
+        "creation_source"
       ]
       const validatedSortBy = allowedSortColumns.includes(sortBy) ? sortBy : "created_at"
       const validatedSortOrder = sortOrder.toLowerCase() === "asc" ? "ASC" : "DESC"
@@ -40,8 +41,13 @@ export async function GET(request: NextRequest) {
       const totalCount = parseInt(countRows[0].count)
 
       let sql = `
-        SELECT id, employee_id, email, phone_number, display_name, total_score, games_played, is_active, created_at
-        FROM players
+        SELECT 
+          p.id, p.employee_id, p.email, p.phone_number, p.display_name, 
+          p.total_score, p.games_played, p.is_active, p.created_at, 
+          p.creation_source,
+          au.email as created_by_email
+        FROM players p
+        LEFT JOIN admin_users au ON p.created_by_admin_id = au.id
         ${whereClause}
         ORDER BY ${validatedSortBy} ${validatedSortOrder}
       `
@@ -66,9 +72,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
-      const { display_name, email, phone_number, password } = await request.json()
+      const adminId = admin.id
+      const { display_name, email, phone_number, password } = await req.json()
 
       if (!email && !phone_number) {
           return NextResponse.json({ error: "Email or Phone is required" }, { status: 400 })
@@ -77,13 +84,25 @@ export async function POST(request: NextRequest) {
       const passwordHash = await hash(password || Math.random().toString(36).slice(-8), 10)
 
       const { rows } = await adminDb.query(
-        `INSERT INTO players (display_name, email, phone_number, password_hash)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO players (display_name, email, phone_number, password_hash, created_by_admin_id, creation_source)
+         VALUES ($1, $2, $3, $4, $5, 'admin')
          RETURNING id, display_name, email, phone_number, is_active, created_at`,
-        [display_name, email || null, phone_number || null, passwordHash]
+        [display_name, email || null, phone_number || null, passwordHash, adminId]
       )
 
-      return NextResponse.json(rows[0], { status: 201 })
+      const newPlayer = rows[0]
+
+      if (adminId) {
+        await logAdminAction({
+          adminId,
+          action: "CREATE",
+          resourceType: "PLAYER",
+          resourceId: newPlayer.id,
+          details: { display_name, email, phone_number }
+        })
+      }
+
+      return NextResponse.json(newPlayer, { status: 201 })
     } catch (error: any) {
       console.error("[v0] Create player error:", error)
       if (error.code === '23505') { // Unique violation

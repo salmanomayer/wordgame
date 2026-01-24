@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { loginAdmin } from "@/lib/admin-auth"
+import { logAdminAction } from "@/lib/admin-audit"
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +15,13 @@ export async function POST(request: NextRequest) {
     if (!result) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
+
+    await logAdminAction({
+      adminId: result.admin.id,
+      action: "LOGIN",
+      resourceType: "ADMIN_USER",
+      resourceId: result.admin.id
+    })
 
     return NextResponse.json({
       token: result.token,

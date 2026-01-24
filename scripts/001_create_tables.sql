@@ -55,7 +55,9 @@ CREATE TABLE IF NOT EXISTS players (
   games_played INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by_admin_id UUID REFERENCES admin_users(id),
+  creation_source TEXT DEFAULT 'signup'
 );
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -87,6 +89,18 @@ CREATE TABLE IF NOT EXISTS player_logs (
 
 -- 4. GAME CONTENT (SUBJECTS & WORDS)
 -- -----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID NOT NULL REFERENCES admin_users(id),
+  action TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  resource_id TEXT,
+  details JSONB DEFAULT '{}'::jsonb,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS subjects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -193,6 +207,11 @@ CREATE INDEX IF NOT EXISTS idx_game_answers_session ON game_answers(game_session
 CREATE INDEX IF NOT EXISTS idx_player_logs_player_id ON player_logs(player_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_user_id ON password_reset_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_players_employee_id ON players(employee_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_admin_id ON admin_audit_logs(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_action ON admin_audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_resource ON admin_audit_logs(resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_created_at ON admin_audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_players_created_by ON players(created_by_admin_id);
 
 -- 8. LEADERBOARD FUNCTIONS
 -- -----------------------------------------------------------------------------
