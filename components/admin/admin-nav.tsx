@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
-import { LayoutDashboard, Users, BookOpen, UserCog, LogOut, FileText, Cog, Trophy } from "lucide-react"
+import { LayoutDashboard, Users, BookOpen, UserCog, LogOut, FileText, Cog, Trophy, ClipboardList } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -55,6 +55,7 @@ export function AdminNav() {
     { href: "/admin/words", label: "Words", icon: FileText },
     { href: "/admin/games", label: "Games", icon: LayoutDashboard },
     { href: "/admin/games/results", label: "Results", icon: Trophy },
+    { href: "/admin/audit-logs", label: "Audit Logs", icon: ClipboardList },
     { href: "/admin/settings", label: "Settings", icon: Cog },
     { href: "/admin/users", label: "Admin Users", icon: UserCog },
   ]

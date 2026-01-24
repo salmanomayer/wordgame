@@ -18,6 +18,11 @@ interface LeaderboardEntry {
   rank: number
 }
 
+interface Game {
+  id: string
+  title: string
+}
+
 export default function LeaderboardPage() {
   const [weeklyLeaders, setWeeklyLeaders] = useState<LeaderboardEntry[]>([])
   const [monthlyLeaders, setMonthlyLeaders] = useState<LeaderboardEntry[]>([])
@@ -29,8 +34,19 @@ export default function LeaderboardPage() {
     challenge: null,
   })
   const [isChallenge, setIsChallenge] = useState(false)
+  const [games, setGames] = useState<Game[]>([])
+  const [selectedGameId, setSelectedGameId] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  useEffect(() => {
+    const fetchGames = async () => {
+        const res = await fetch("/api/player/games")
+        const json = await res.json().catch(() => ({ games: [] }))
+        setGames(Array.isArray(json?.games) ? json.games : [])
+    }
+    fetchGames()
+  }, [])
 
   useEffect(() => {
     const fetchLeaderboards = async () => {
@@ -49,10 +65,15 @@ export default function LeaderboardPage() {
         setCurrentPlayerId(playerId)
 
         if (isChallenge) {
-          const challengeRes = await fetch("/api/leaderboard/challenge")
+          // If a specific game is selected, fetch results for that game
+          // Otherwise fetch global challenge leaderboard (all-time)
+          const endpoint = selectedGameId 
+             ? `/api/leaderboard/challenge?game_id=${selectedGameId}` 
+             : "/api/leaderboard/challenge"
+
+          const challengeRes = await fetch(endpoint)
           if (!challengeRes.ok) {
-            router.push("/play/login")
-            return
+             // Handle error
           }
           const challenge = (await challengeRes.json().catch(() => [])) as LeaderboardEntry[]
           if (Array.isArray(challenge)) {
@@ -61,6 +82,7 @@ export default function LeaderboardPage() {
             setCurrentUserRank((prev) => ({ ...prev, challenge: userChallenge?.rank || null }))
           }
         } else {
+          // ... existing weekly/monthly logic ...
           const [weeklyRes, monthlyRes] = await Promise.all([
             fetch(`/api/leaderboard/weekly?is_challenge=false`),
             fetch(`/api/leaderboard/monthly?is_challenge=false`),
@@ -93,7 +115,7 @@ export default function LeaderboardPage() {
     }
 
     fetchLeaderboards()
-  }, [router, isChallenge])
+  }, [router, isChallenge, selectedGameId])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="w-5 h-5 text-yellow-400" />
@@ -273,9 +295,28 @@ export default function LeaderboardPage() {
         {/* Leaderboard Tabs */}
         <Card className="bg-slate-900/90 backdrop-blur border-slate-700/50 shadow-xl">
           <CardHeader>
-            <CardTitle className="text-white text-xl">
-              {isChallenge ? "Challenge Leaderboard" : "Top Players"}
-            </CardTitle>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <CardTitle className="text-white text-xl">
+                {isChallenge ? "Challenge Leaderboard" : "Top Players"}
+              </CardTitle>
+              
+              {isChallenge && (
+                <div className="w-full sm:w-64">
+                    <select
+                        value={selectedGameId}
+                        onChange={(e) => setSelectedGameId(e.target.value)}
+                        className="w-full h-9 rounded-md border border-slate-700 bg-slate-950 px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                        <option value="">All Games</option>
+                        {games.map((g) => (
+                            <option key={g.id} value={g.id}>
+                                {g.title}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {isChallenge ? (

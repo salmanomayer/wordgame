@@ -2,11 +2,13 @@ import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
 import { hash } from "bcryptjs"
+import { logAdminAction } from "@/lib/admin-audit"
 
 export async function POST(request: NextRequest) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
-      const { players } = await request.json()
+      const adminId = admin.id
+      const { players } = await req.json()
 
       if (!Array.isArray(players) || players.length === 0) {
         return NextResponse.json({ error: "No players data provided" }, { status: 400 })
@@ -71,8 +73,8 @@ export async function POST(request: NextRequest) {
           // We can try to catch that.
 
           const { rows, error } = await adminDb.query(
-            `INSERT INTO players (employee_id, display_name, email, phone_number, password_hash)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO players (employee_id, display_name, email, phone_number, password_hash, created_by_admin_id, creation_source)
+             VALUES ($1, $2, $3, $4, $5, $6, 'import')
              ON CONFLICT (employee_id) 
              DO UPDATE SET
                display_name = EXCLUDED.display_name,
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
                END,
                updated_at = NOW()
              RETURNING id`,
-            [cleanEmployeeId, display_name || "Unknown", cleanEmail, cleanPhone, passwordHash]
+            [cleanEmployeeId, display_name || "Unknown", cleanEmail, cleanPhone, passwordHash, adminId]
           )
           
           if (error) {
@@ -119,6 +121,19 @@ export async function POST(request: NextRequest) {
              results.errors.push(`Database Error for ${cleanEmployeeId}: ${err.message}`)
           }
         }
+      }
+
+      if (adminId) {
+        await logAdminAction({
+          adminId,
+          action: "IMPORT",
+          resourceType: "PLAYER",
+          details: { 
+            count: players.length, 
+            success: results.success, 
+            failed: results.failed 
+          }
+        })
       }
 
       return NextResponse.json({ message: "Import processed", results })
