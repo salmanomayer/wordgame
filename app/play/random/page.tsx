@@ -20,6 +20,7 @@ interface Subject {
   id: string
   name: string
   description: string
+  is_random_active?: boolean
 }
 
 export default function RandomPlayPage() {
@@ -65,12 +66,23 @@ export default function RandomPlayPage() {
         } catch (logError) {}
 
         const subjectsRes = await fetch("/api/subjects")
-        const subjects = await subjectsRes.json().catch(() => [])
+        const allSubjects = await subjectsRes.json().catch(() => []) as Subject[]
 
-        if (Array.isArray(subjects) && subjects.length > 0) {
-          setSubjects(subjects)
-          const randomIndex = Math.floor(Math.random() * subjects.length)
-          setSelectedSubject(subjects[randomIndex].id)
+        if (Array.isArray(allSubjects) && allSubjects.length > 0) {
+          // Filter subjects that are enabled for random play
+          const activeSubjects = allSubjects.filter(s => s.is_random_active)
+          setSubjects(activeSubjects)
+          
+          if (activeSubjects.length > 0) {
+              const randomIndex = Math.floor(Math.random() * activeSubjects.length)
+              setSelectedSubject(activeSubjects[randomIndex].id)
+          } else {
+              // Fallback if no subjects are explicitly enabled for random play
+              // We might show all or none. Let's show all active ones as fallback or handle empty.
+              // For now, if none are marked 'is_random_active', we assume all 'is_active' ones are available (legacy behavior)
+              // But user asked to show enabled ones. So if 0 enabled, list is empty.
+              setSubjects([]) 
+          }
         }
       } finally {
         setLoading(false)
@@ -84,6 +96,11 @@ export default function RandomPlayPage() {
     if (!selectedSubject) {
       alert("Please select a subject first")
       return
+    }
+
+    if (subjects.length === 0) {
+        alert("No subjects are currently available for random play.")
+        return
     }
 
     if (!player?.id) {
@@ -230,16 +247,20 @@ export default function RandomPlayPage() {
                   <div className="space-y-6 py-4">
                     <div className="space-y-3">
                       <Label className="text-base font-semibold">Subject</Label>
-                      <RadioGroup value={selectedSubject} onValueChange={setSelectedSubject}>
-                        {subjects.map((subject) => (
-                          <div key={subject.id} className="flex items-center space-x-2">
-                            <RadioGroupItem value={subject.id} id={subject.id} />
-                            <Label htmlFor={subject.id} className="cursor-pointer">
-                              {subject.name}
-                            </Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
+                      {subjects.length === 0 ? (
+                        <p className="text-sm text-yellow-400">No subjects available for random play.</p>
+                      ) : (
+                        <RadioGroup value={selectedSubject} onValueChange={setSelectedSubject}>
+                            {subjects.map((subject) => (
+                            <div key={subject.id} className="flex items-center space-x-2">
+                                <RadioGroupItem value={subject.id} id={subject.id} />
+                                <Label htmlFor={subject.id} className="cursor-pointer">
+                                {subject.name}
+                                </Label>
+                            </div>
+                            ))}
+                        </RadioGroup>
+                      )}
                     </div>
 
                     <div className="space-y-3">

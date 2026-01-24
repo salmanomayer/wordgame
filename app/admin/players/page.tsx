@@ -98,11 +98,12 @@ export default function AdminPlayersPage() {
   
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
   const [playerName, setPlayerName] = useState("")
+  const [playerEmployeeId, setPlayerEmployeeId] = useState("")
   const [playerEmail, setPlayerEmail] = useState("")
   const [playerPhone, setPlayerPhone] = useState("")
   const [playerPassword, setPlayerPassword] = useState("") // Only for create
   const [savingPlayer, setSavingPlayer] = useState(false)
-  
+
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
@@ -344,6 +345,7 @@ export default function AdminPlayersPage() {
   const openAddPlayerDialog = () => {
     setEditingPlayer(null)
     setPlayerName("")
+    setPlayerEmployeeId("")
     setPlayerEmail("")
     setPlayerPhone("")
     setPlayerPassword("")
@@ -353,6 +355,7 @@ export default function AdminPlayersPage() {
   const openEditPlayerDialog = (player: Player) => {
     setEditingPlayer(player)
     setPlayerName(player.display_name || "")
+    setPlayerEmployeeId(player.employee_id || "")
     setPlayerEmail(player.email || "")
     setPlayerPhone(player.phone_number || "")
     setPlayerPassword("") // Usually don't show old password
@@ -373,6 +376,7 @@ export default function AdminPlayersPage() {
       
       const body: any = {
         display_name: playerName,
+        employee_id: playerEmployeeId,
         email: playerEmail,
         phone_number: playerPhone,
       }
@@ -849,6 +853,15 @@ export default function AdminPlayersPage() {
             </DialogHeader>
             <form onSubmit={handleSavePlayer}>
               <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="playerEmployeeId">Employee ID</Label>
+                  <Input
+                    id="playerEmployeeId"
+                    value={playerEmployeeId}
+                    onChange={(e) => setPlayerEmployeeId(e.target.value.toUpperCase())}
+                    placeholder="PG0000000"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="playerName">Display Name</Label>
                   <Input

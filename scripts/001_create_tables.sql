@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS subjects (
   name TEXT NOT NULL,
   description TEXT,
   is_active BOOLEAN DEFAULT TRUE,
+  is_random_active BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

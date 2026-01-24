@@ -75,19 +75,22 @@ export async function POST(request: NextRequest) {
   return withAdminAuth(request, async (req, admin) => {
     try {
       const adminId = admin.id
-      const { display_name, email, phone_number, password } = await req.json()
+      const { display_name, email, phone_number, password, employee_id } = await req.json()
 
-      if (!email && !phone_number) {
-          return NextResponse.json({ error: "Email or Phone is required" }, { status: 400 })
+      // Employee ID is now a primary identifier, so we check for it
+      // But we keep backward compatibility if they only provide email/phone for now unless strictly required
+      if (!employee_id && !email && !phone_number) {
+          return NextResponse.json({ error: "Employee ID, Email, or Phone is required" }, { status: 400 })
       }
 
       const passwordHash = await hash(password || Math.random().toString(36).slice(-8), 10)
+      const cleanEmployeeId = employee_id ? String(employee_id).trim().toUpperCase() : null
 
       const { rows } = await adminDb.query(
-        `INSERT INTO players (display_name, email, phone_number, password_hash, created_by_admin_id, creation_source)
-         VALUES ($1, $2, $3, $4, $5, 'admin')
-         RETURNING id, display_name, email, phone_number, is_active, created_at`,
-        [display_name, email || null, phone_number || null, passwordHash, adminId]
+        `INSERT INTO players (display_name, email, phone_number, password_hash, created_by_admin_id, creation_source, employee_id)
+         VALUES ($1, $2, $3, $4, $5, 'admin', $6)
+         RETURNING id, display_name, email, phone_number, is_active, created_at, employee_id`,
+        [display_name, email || null, phone_number || null, passwordHash, adminId, cleanEmployeeId]
       )
 
       const newPlayer = rows[0]
@@ -98,7 +101,7 @@ export async function POST(request: NextRequest) {
           action: "CREATE",
           resourceType: "PLAYER",
           resourceId: newPlayer.id,
-          details: { display_name, email, phone_number }
+          details: { display_name, email, phone_number, employee_id: cleanEmployeeId }
         })
       }
 

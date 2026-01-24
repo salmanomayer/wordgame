@@ -6,17 +6,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   return withAdminAuth(request, async () => {
     try {
       const { id } = await params
-      const { display_name, email, phone_number } = await request.json()
+      const { display_name, email, phone_number, employee_id } = await request.json()
+      
+      const cleanEmployeeId = employee_id ? String(employee_id).trim().toUpperCase() : null
 
       const { rows } = await adminDb.query(
         `UPDATE players 
          SET display_name = COALESCE($1, display_name),
              email = COALESCE($2, email),
              phone_number = COALESCE($3, phone_number),
+             employee_id = COALESCE($4, employee_id),
              updated_at = NOW()
-         WHERE id = $4
-         RETURNING id, display_name, email, phone_number, is_active, created_at`,
-        [display_name, email, phone_number, id]
+         WHERE id = $5
+         RETURNING id, display_name, email, phone_number, is_active, created_at, employee_id`,
+        [display_name, email, phone_number, cleanEmployeeId, id]
       )
 
       if (rows.length === 0) {

@@ -2,8 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
 import { transaction } from "@/lib/postgres"
+import { logAdminAction } from "@/lib/admin-audit"
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // ... existing GET ...
   return withAdminAuth(request, async () => {
     try {
       const { id } = await params
@@ -48,10 +50,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
       const { id } = await params
-      const body = await request.json()
+      const body = await req.json()
       const { title, start_time, end_time, correct_marks, time_per_word, word_count, difficulty, is_active, attempts_limit, subjects, stages } = body
 
       const result = await transaction(async (client) => {
@@ -162,6 +164,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return gameRes.rows[0]
       })
 
+      if (admin?.id) {
+        await logAdminAction({
+          adminId: admin.id,
+          action: "UPDATE",
+          resourceType: "GAME",
+          resourceId: id,
+          details: { title, difficulty, stages_count: stages?.length || 0 }
+        })
+      }
+
       return NextResponse.json(result)
     } catch (error) {
       console.error("[v0] Game update error:", error)
@@ -171,10 +183,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
       const { id } = await params
       await adminDb.query("DELETE FROM games WHERE id = $1", [id])
+
+      if (admin?.id) {
+        await logAdminAction({
+          adminId: admin.id,
+          action: "DELETE",
+          resourceType: "GAME",
+          resourceId: id
+        })
+      }
+
       return NextResponse.json({ success: true })
     } catch (error) {
       console.error("[v0] Game delete error:", error)

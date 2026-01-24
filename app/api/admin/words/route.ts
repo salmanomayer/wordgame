@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { withAdminAuth } from "@/lib/admin-middleware"
 import { adminDb } from "@/lib/db"
+import { logAdminAction } from "@/lib/admin-audit"
 
 export async function GET(request: NextRequest) {
+  // ... existing GET implementation ...
   return withAdminAuth(request, async () => {
     try {
       const { searchParams } = new URL(request.url)
@@ -73,14 +75,27 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withAdminAuth(request, async () => {
+  return withAdminAuth(request, async (req, admin) => {
     try {
-      const { word, hint, subject_id } = await request.json()
+      const { word, hint, subject_id } = await req.json()
       const { rows } = await adminDb.query(
         "INSERT INTO words (word, hint, subject_id) VALUES ($1, $2, $3) RETURNING *",
         [String(word).toUpperCase(), hint, subject_id]
       )
-      return NextResponse.json(rows[0])
+      
+      const newWord = rows[0]
+
+      if (admin?.id) {
+        await logAdminAction({
+          adminId: admin.id,
+          action: "CREATE",
+          resourceType: "WORD",
+          resourceId: newWord.id,
+          details: { word, hint, subject_id }
+        })
+      }
+
+      return NextResponse.json(newWord)
     } catch (error) {
       console.error("[v0] Word create error:", error)
       return NextResponse.json({ error: "Failed to create word" }, { status: 500 })
